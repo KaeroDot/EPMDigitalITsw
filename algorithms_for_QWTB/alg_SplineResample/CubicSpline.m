@@ -31,9 +31,20 @@ classdef CubicSpline
             d = zeros(1, obj.n);
             h = diff(obj.x);
             alpha = zeros(1, obj.n - 2);
-            for i = 2:(obj.n - 1)
-                alpha(i-1) = (3 / h(i-1)) * (a(i + 1) - a(i)) - (3 / h(i-1)) * (a(i) - a(i - 1));
-            end
+            % old code:
+                    % for i = 2:(obj.n - 1)
+                        % alpha(i-1) = (3 / h(i-1)) * (a(i + 1) - a(i)) - (3 / h(i-1)) * (a(i) - a(i - 1));
+                    % end
+            % faster code without for loop:
+            a_ip1 = [ a  NaN NaN];
+            a_i =   [NaN  a  NaN];
+            a_im1 = [NaN NaN  a ];
+            h_im1 = [NaN  h  NaN NaN]; % NaN two times because h is result of diff, that is shorter by 1 element
+            alpha = (3 ./ h_im1) .* (a_ip1 - a_i) - (3 ./ h_im1) .* (a_i - a_im1);
+            % remove excess NaNs:
+            % (if user will use empty x or y or both, next line will fail. But
+            % the scrip should check sane inputs at the beginning, not inside.)
+            alpha = alpha(3 : end-2);
 
             l = ones(1, obj.n);
             mu = zeros(1, obj.n);
