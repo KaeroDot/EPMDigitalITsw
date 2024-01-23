@@ -34,35 +34,44 @@ alginfo.inputs(4).alternative = 0;
 alginfo.inputs(4).optional = 0;
 alginfo.inputs(4).parameter = 0;
 
-alginfo.inputs(5).name = 'Tsest';
-alginfo.inputs(5).desc = 'Estimate of sampling period';
-alginfo.inputs(5).alternative = 2;
+alginfo.inputs(5).name = 'fest';
+alginfo.inputs(5).desc = 'Estimate of fundamental component frequency';
+alginfo.inputs(5).alternative = 0;
 alginfo.inputs(5).optional = 0;
 alginfo.inputs(5).parameter = 0;
 
-alginfo.inputs(6).name = 'fsest';
-alginfo.inputs(6).desc = 'Estimate of sampling frequency';
-alginfo.inputs(6).alternative = 2;
-alginfo.inputs(6).optional = 0;
-alginfo.inputs(6).parameter = 0;
+alginfo.inputs(6).name = 'method';
+alginfo.inputs(6).desc = 'Method of resampling: `keepN`, `minimizefs`, `poweroftwo`';
+alginfo.inputs(6).alternative = 0;
+alginfo.inputs(6).optional = 1;
+alginfo.inputs(6).parameter = 1;
 
-alginfo.inputs(7).name = 'test';
-alginfo.inputs(7).desc = 'Estimate of time series';
-alginfo.inputs(7).alternative = 2;
-alginfo.inputs(7).optional = 0;
-alginfo.inputs(7).parameter = 0;
+alginfo.inputs(7).name = 'D';
+alginfo.inputs(7).desc = 'Denominator to reduce resampled bandwidth';
+alginfo.inputs(7).alternative = 0;
+alginfo.inputs(7).optional = 1;
+alginfo.inputs(7).parameter = 1;
 
-alginfo.outputs(1).name = 'y';
-alginfo.outputs(1).desc = 'Resampled samples';
-
-alginfo.outputs(2).name = 'fs';
-alginfo.outputs(2).desc = 'Sampling frequency after resampling, equal to fsest.';
+alginfo.outputs(1).name = 'fs';
+alginfo.outputs(1).desc = 'Sampling frequency after resampling, equal to fsest.';
 
 alginfo.outputs(2).name = 'Ts';
 alginfo.outputs(2).desc = 'Sampling period after resampling, equal to fsest.';
 
 alginfo.outputs(3).name = 't';
 alginfo.outputs(3).desc = 'Time series after resampling, equal to test';
+
+alginfo.outputs(4).name = 'y';
+alginfo.outputs(4).desc = 'Resampled samples';
+
+alginfo.outputs(5).name = 'Pf';
+alginfo.outputs(5).desc = 'Integer upsampling factor';
+
+alginfo.outputs(6).name = 'Qf';
+alginfo.outputs(6).desc = 'Integer decimation factor';
+
+alginfo.outputs(7).name = 'method';
+alginfo.outputs(7).desc = 'Method of resampling.';
 
 alginfo.providesGUF = 0;
 alginfo.providesMCM = 0;

@@ -9,23 +9,19 @@ f = 49.77;
 A = 1;
 N = 2000;
 fs = 4000;
-ts = 1/fs;
-SimulatedSignal.t.v = (0:N-1)*ts;
-SimulatedSignal.y.v = A*sin(2*pi*f*SimulatedSignal.t.v);
-
-% Next required resampling parameters are developed so that number of samples
-% remain the same and the resulting record is sampled coherently. The knowledge
-% of true signal frequency is required.
-ssfr1 = fs / f;     % The actual sampling/signal ratio
-Cycles = floor(N/ssfr1); % Number of full cycles available
-SimulatedSignal.fsest.v = N/(Cycles/f);
+Ts = 1/fs;
+DI.t.v = (0:N-1)*Ts;
+DI.y.v = A*sin(2*pi*f*DI.t.v);
+% Set estimate of signal frequency to exact signal frequency and resampling method to keep the number of samples.
+DI.fest.v = f;
+DI.method.v = 'keepN';
 
 % Call algorithm SplineResample
-ResampledSignal = qwtb('SplineResample', SimulatedSignal);
+DO = qwtb('SplineResample', DI);
 
 % Get spectra of both signals for plotting
-SpectrumNonCoherent = qwtb('SP-WFFT', SimulatedSignal);
-SpectrumResampled = qwtb('SP-WFFT', ResampledSignal);
+SpectrumNonCoherent = qwtb('SP-WFFT', DI);
+SpectrumResampled = qwtb('SP-WFFT', DO);
 
 % Compare amplitude of the main signal component:
 printf('-------------------------------\n')
@@ -38,7 +34,7 @@ id = find(SpectrumResampled.A.v == max(SpectrumResampled.A.v));
 printf('Resampled to coherent and FFT): f = %.2f, A = %.5f\n', SpectrumResampled.f.v(id), SpectrumResampled.A.v(id));
 printf('-------------------------------\n')
 
-% Now plot and compare both spectra.
+% Plot and compare both spectra.
 hold on
 semilogy(SpectrumNonCoherent.f.v, abs(SpectrumNonCoherent.A.v), '-k')
 semilogy(SpectrumResampled.f.v, abs(SpectrumResampled.A.v), '-r')
