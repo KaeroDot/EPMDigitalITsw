@@ -21,6 +21,10 @@ Contains algorithms ready to be included in
 [QWTB](https://github.com/qwtb/qwtb). Just copy directories starting with
 `alg_` to your QWTB folder. Or do not copy, just make a symbolic link.
 
+# evaluation
+Scripts for evaluation of algoirthms. Run `resampling_test.m` to compare
+resampling algorithm with windowed FFT and sine fitting.
+
 # Reports
 
 ## A2.2.1
