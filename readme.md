@@ -16,12 +16,12 @@ Example data measured on SAMU.
 `convert_all.sh` - converts pcap files to csv files using script `pcap_samples_to_csv.py`
 `process.m` - loads all output csv, make FFT, plots spectrums.
 
-#algorithms_for_QWTB
+## algorithms_for_QWTB
 Contains algorithms ready to be included in
 [QWTB](https://github.com/qwtb/qwtb). Just copy directories starting with
 `alg_` to your QWTB folder. Or do not copy, just make a symbolic link.
 
-# evaluation
+## evaluation
 Scripts for evaluation of algoirthms. Run `resampling_test.m` to compare
 resampling algorithm with windowed FFT and sine fitting.
 
