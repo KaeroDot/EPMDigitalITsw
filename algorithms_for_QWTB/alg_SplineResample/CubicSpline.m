@@ -40,11 +40,12 @@ classdef CubicSpline
             h = diff(obj.x);
             alpha = zeros(1, obj.n - 2);
 
+            %% Part 1
             % Code represented as a loop (slow way): 
-            % for i = 2:(obj.n - 1)
-                % alpha(i-1) = (3 / h(i-1)) * (a(i + 1) - a(i)) - (3 / h(i-1)) * (a(i) - a(i - 1));
-            % end
-            % The same code, but faster and without for loop:
+                % for i = 2:(obj.n - 1)
+                    % alpha(i-1) = (3 / h(i-1)) * (a(i + 1) - a(i)) - (3 / h(i-1)) * (a(i) - a(i - 1));
+                % end
+            % The same code, but faster, without for loop:
             a_ip1 = [ a  NaN NaN];
             a_i =   [NaN  a  NaN];
             a_im1 = [NaN NaN  a ];
@@ -54,20 +55,49 @@ classdef CubicSpline
             % If x or y is empty, next line will fail:
             alpha = alpha(3 : end-2);
 
+            %% Part 2
             l = ones(1, obj.n);
             mu = zeros(1, obj.n);
             z = zeros(1, obj.n);
-
+            % Original slower code:
+                % for i = 2:(obj.n - 1)
+                %     l(i) = 2 * (obj.x(i + 1) - obj.x(i - 1)) - h(i - 1) * mu(i - 1);
+                %     mu(i) = h(i) / l(i);
+                %     z(i) = (alpha(i - 1) - h(i - 1) * z(i - 1)) / l(i);
+                % end
+            % The same code, but calculation of mu was taken out from the loop
+            % to save about 2-7 % of calculation time:
             for i = 2:(obj.n - 1)
-                l(i) = 2 * (obj.x(i + 1) - obj.x(i - 1)) - h(i - 1) * mu(i - 1);
-                mu(i) = h(i) / l(i);
+                l(i) = 2 * (obj.x(i + 1) - obj.x(i - 1)) - h(i - 1).*h(i - 1)./l(i - 1);
                 z(i) = (alpha(i - 1) - h(i - 1) * z(i - 1)) / l(i);
             end
+            mu = [h 0]./l;
+            mu(1) = 0;
+
+            %% Part 3
+            % Original slower code:
+                % for j = (obj.n - 1):-1:1
+                %     c(j) = z(j) - mu(j) * c(j + 1);
+                %     b(j) = (a(j + 1) - a(j)) / h(j) - h(j) * (c(j + 1) + 2 * c(j)) / 3;
+                %     d(j) = (c(j + 1) - c(j)) / (3 * h(j));
+                % end
+            % The same code, but calculation of b and d was taken out from the
+            % loop to save about 50 % of calculation time
             for j = (obj.n - 1):-1:1
                 c(j) = z(j) - mu(j) * c(j + 1);
-                b(j) = (a(j + 1) - a(j)) / h(j) - h(j) * (c(j + 1) + 2 * c(j)) / 3;
-                d(j) = (c(j + 1) - c(j)) / (3 * h(j));
             end
+            h_j = [0 h 0 0];
+            c_jp1 = [c 0 0];
+            c_j = [0 c 0];
+            a_jp1 = [a 0 0];
+            a_j = [0 a 0];
+            b = (a_jp1 - a_j)./h_j - h_j.*(c_jp1 + 2.*c_j)./3;
+            d = (c_jp1 - c_j)./(3 .* h_j);
+            b = b(2:end-1);
+            d = d(2:end-1);
+            b(end) = 0; % because b was initialized as b = zeros..
+            d(end) = 0; % because d was initialized as d = zeros..
+
         end % function calculateCoefficients
 
         function y_eval = evaluate(obj, x_eval, varargin)
@@ -98,7 +128,6 @@ classdef CubicSpline
             end
 
             % Evaluate spline:
-            tic
             if fast_method
                 % Slower method. Using arrayfun. Much faster than simple for cycles, 3x slower
                 % than faster method, but less memory demanding.
@@ -125,7 +154,6 @@ classdef CubicSpline
                     y_eval(k) = obj.a(indexes(k)) + obj.b(indexes(k)) * dx + obj.c(indexes(k)) * dx^2 + obj.d(indexes(k)) * dx^3;
                 end % for
             end % if method
-            toc
         end % function evaluate
     end
 end
