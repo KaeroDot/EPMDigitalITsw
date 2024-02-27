@@ -173,3 +173,13 @@ classdef CubicSpline
         end % function evaluate
     end
 end
+
+%% Selftests
+%!test
+%! n = 5;
+%! t = 0:n;
+%! t2 = [0:2.*n]./2;
+%! y = t;
+%! spline = CubicSpline(t, y);
+%! y2 = spline.evaluate(t2);
+%! assert(y2(:) == [0:0.5:5](:));
