@@ -1,6 +1,20 @@
-% spline = CubicSpline(t, record) - t,record are vectors of same length
-% y_new = spline.evaluate(t2) - t2 is vector with new timing positions
-% 
+% Class for calculation of Cubic Splines and spline resampling.
+% Usage:
+% Calculate splines based on the sampled record and time stamps:
+%     spline = CubicSpline(t, record)
+% where:
+%  t is vector with timestamps,
+%  record is vector with data,
+%  spline is object with spline coefficients.
+% t and record vectors must be of the same size.
+%
+% Interpolate record to the new time stamps:
+%     y_new = spline.evaluate(t2, method)
+% where:
+%  t2 is vector with new timestamps,
+%  record is vector with interpolated data,
+%  method selects use of arrayfun or bsxfun.
+
 classdef CubicSpline
     % CubicSpline - Class for cubic splines interpolation.
 
@@ -107,7 +121,7 @@ classdef CubicSpline
             % ----------
             % x_eval: Array of double
             %     X coordinates of evaluated points
-            %     fast_method: selects a method for calculation. If 1, faster method is selected. Default is 0.
+            %     method: selects a method for calculation. If 0, arrayfun method is selected, if 1, bsxfun method is selected. Default is 0.
             %
             % Returns
             % -------
@@ -120,18 +134,18 @@ classdef CubicSpline
             end
             if nargin < 3
                 % Use arrayfun method as a failsafe.
-                fast_method = 0;
+                method = 0;
             else
-                fast_method = varargin{1};
+                method = varargin{1};
                 % ensure method is boolean:
-                fast_method = not(not(fast_method));
+                method = not(not(method));
             end
 
             % Evaluate spline:
-            if fast_method
-                % Slower method. Using arrayfun. Much faster than simple for cycles, 3x slower
-                % than faster method, but less memory demanding.
-            
+            if not(method)
+                % Using arrayfun. Slower for smaller number of elements (<1e4).
+                % Faster for larger number of elements and not so memory
+                % demanding.
                 x_eval = reshape(x_eval, [], 1); % Ensure x_eval is a column vector
                 y_eval = zeros(size(x_eval)); % Initialize y_eval with the same size as x_eval
 
@@ -146,8 +160,10 @@ classdef CubicSpline
                                 obj.c(indices(i)) * dx^2 + obj.d(indices(i)) * dx^3;
                 end
             else
-                % Faster method. Using bsxfun.
-                indexes = reshape(sum(bsxfun(@le, obj.x(:), x_eval(:).'), 1), size(x_eval)); 
+                % Using bsxfun. Faster for smaller number of elements (<1e4).
+                % Slower for larger number of elements and memory demanding.
+                indexes = reshape(sum(bsxfun(@le, obj.x(:), x_eval(:).'), 1),
+                size(x_eval)); 
                 % Now size(indexes) is same as size(x_eval)
                 for k = 1:numel(x_eval)
                     dx = x_eval(k) - obj.x(indexes(k));
