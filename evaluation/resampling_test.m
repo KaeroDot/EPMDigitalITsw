@@ -1,50 +1,75 @@
 clear all
 addpath('~/metrologie/Q-Wave/qwtb/qwtb')
+%% Settings of signal
 % generate some noncoherent signal:
 
-SigParam.f.v = 50;
-SigParam.A.v = 1;
-SigParam.fs.v = 96e3;
-% SigParam.L.v = 20./SigParam.f.v.*SigParam.fs.v ; % that is 20 periods at 50 Hz
-SigParam.L.v = 5./SigParam.f.v.*SigParam.fs.v ;
-SigParam.ph.v = 0;
-SigParam.O.v = 0;
-SigParam.THD.v = 0;
-SigParam.nharm.v = 1;
-SigParam.noise.v = 1e-6;
+SigParam.f.v = 50;      % nominal signal frequency (Hz)
+SigParam.A.v = 1;       % nominal amplitude (V)
+SigParam.fs.v = 96e3;   % nominal sampling frequency (Hz)
+% SigParam.L.v = 20./SigParam.f.v.*SigParam.fs.v;   % that is 20 periods at 50 Hz
+SigParam.L.v = 5./SigParam.f.v.*SigParam.fs.v;      % length of the record in multiple of periods
+SigParam.ph.v = 0;      % nominal signal phase (rad)
+SigParam.O.v = 0;       % nominal offset (V)
+SigParam.THD.v = 1e-3;  % nominal harmonic distortion
+SigParam.nharm.v = 1;   % nominal number of harmonics
+SigParam.noise.v = 0e-6;% nominal signal noise (V)
 
-SigParamVar.f.v = [49.9:0.05:50.1];
-% SigParamVar.fs.v = [1/4000 1/8000];
-% SigParamVar.L.v = [1e3 1.1e3 1.2e3];
+%% Varied parameter
+% SigParamVar.f.v = [49.9 : 0.01 : 50.1];
+% SigParamVar.L.v = [1:0.05:10]./SigParam.f.v.*SigParam.fs.v;
+% SigParamVar.fs.v = [4000 : 4000 : 96000];
+SigParamVar.noise.v = logspace(-6, -3, 200);
 
+%% Additional parameters:
+SigParam.EstimationAlgorithm.v = 'PSFE';
+SigParam.ResamplingMethod.v = 'keepn';
+SigParam.SignalWindow.v = 'flattop_248D';
+SigParam.fEstimateForFit.v = 50;
+
+%% Calculation settings
 CS.verbose = 0;
 CS.var.dir = '_temp';
 CS.var.fnprefix = 'var';
 CS.var.cleanfiles = 1;
 
+%% Calculation
 jobfn = qwtbvar('calc', 'gen_and_calc', SigParam, SigParamVar, CS);
 
-[f, fErrEstimate] = qwtbvar('plot2D', jobfn, 'f.v', 'fErrEstimate.v');
-[f, AErrEstimate] = qwtbvar('plot2D', jobfn, 'f.v', 'AErrEstimate.v');
-[f, AErrWinFFT] = qwtbvar('plot2D', jobfn, 'f.v', 'AErrWinFFT.v');
-[f, AErrResFFT] = qwtbvar('plot2D', jobfn, 'f.v', 'AErrResFFT.v');
-[f, AErrFit] = qwtbvar('plot2D', jobfn, 'f.v', 'AErrFit.v');
+%% Plotting
+% x axis is based on variable:
+xaxisquantity = 'noise.v';
+xaxislabel = 'Noise (σ)';
 
+% signal amplitude using fft with window:
+[x, AErrSigFFTWin] = qwtbvar('plot2D', jobfn, xaxisquantity, 'AErrSigFFTWin.v');
+% signal amplitude using sine fitting:
+[x, AErrSigFit] = qwtbvar('plot2D', jobfn, xaxisquantity, 'AErrSigFit.v');
+% signal amplitude using algorithm for signal frequency estimate:
+[x, AErrSigEst] = qwtbvar('plot2D', jobfn, xaxisquantity, 'AErrSigEst.v');
+% signal amplitude using fft of resampled signal:
+[x, AErrResSigFFT] = qwtbvar('plot2D', jobfn, xaxisquantity, 'AErrResSigFFT.v');
+
+figure
 hold on
-plot(f.v, AErrWinFFT.v, '-r',...
-     f.v, AErrResFFT.v, '-b',...
-     f.v, AErrFit, '-g');
+semilogx(x.v, AErrSigFFTWin.v, '-k',...
+     x.v, AErrSigFit.v, '-xg',...
+     x.v, AErrSigEst.v, '-+b',...
+     x.v, AErrResSigFFT.v, '-r');
 % plot(f.v, AErrEstimate.v, '--k', f.v, fErrEstimate.v, '--g')
 hold off
-xlabel('signal f (Hz)')
-ylabel('error from nominal value (V)')
-legend('A: windowing flattop',...
-       'A: resampling',...
-       'A: from estimate',...
-       'A: from fit');
+% xlabel('Signal f (Hz)')
+xlabel(xaxislabel)
+ylabel('Error from nominal value (V)')
+legend('A: Signal FFT, window',...
+       'A: Signal Fit',...
+       'A: Signal Estimate',...
+       'A: Resampling signal and FFT, rect. window');
+
+title(sprintf('Amplitude errors.\nEstimate of signal fr. based on PSFE.'))
 
 % 'f: from estimate, used for resampling')
 saveas(gcf(), 'resampling_vs_wfft.png')
+saveas(gcf(), 'resampling_vs_wfft.fig')
 
 % Signal = qwtb('GenNHarm', SigParam);
 % SignalSpectrum = qwtb('SP-WFFT', Signal);
