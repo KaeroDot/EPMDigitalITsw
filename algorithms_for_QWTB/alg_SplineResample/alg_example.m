@@ -39,7 +39,7 @@ hold on
 semilogy(SpectrumNonCoherent.f.v, abs(SpectrumNonCoherent.A.v), '-k')
 semilogy(SpectrumResampled.f.v, abs(SpectrumResampled.A.v), '-r')
 hold off
-xlabel('frequency (Hz)')
-xlabel('signal amplitude')
+xlabel('Frequency (Hz)')
+ylabel('Signal amplitude')
 legend('original signal', 'resampled signal')
 title('Signal spectra')
