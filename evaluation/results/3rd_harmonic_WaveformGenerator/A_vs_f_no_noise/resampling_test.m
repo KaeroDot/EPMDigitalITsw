@@ -16,15 +16,12 @@ SigParam.noise.v = 0e-6;% nominal signal noise (V)
 
 %% Varied parameter
 %---
-% tmp = [49.9 : 0.01 : 50.1];
-% SigParamVar.f.v = [tmp; 3.*tmp]';
-% xaxisquantity = 'f.v';
-% xaxislabel = 'Signal frequency (Hz)';
+tmp = [49.9 : 0.01 : 50.1];
+SigParamVar.f.v = [tmp; 3.*tmp]';
+xaxisquantity = 'f.v';
+xaxislabel = 'Signal frequency (Hz)';
 %---
-% round is needed to prevent rounding errors in WaveformGenerator algorithm!
-SigParamVar.L.v = round([1:0.05:10]./SigParam.f.v(1).*SigParam.fs.v);
-xaxisquantity = 'L.v';
-xaxislabel = 'Record length (samples)';
+% SigParamVar.L.v = [1:0.05:10]./SigParam.f.v.*SigParam.fs.v;
 %---
 % SigParamVar.fs.v = [4000 : 4000 : 96000];
 % xaxisquantity = 'fs.v';

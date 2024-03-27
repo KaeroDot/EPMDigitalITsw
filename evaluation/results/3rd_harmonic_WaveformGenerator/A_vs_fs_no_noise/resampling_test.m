@@ -15,24 +15,10 @@ SigParam.nharm.v = 1;   % nominal number of harmonics
 SigParam.noise.v = 0e-6;% nominal signal noise (V)
 
 %% Varied parameter
-%---
-% tmp = [49.9 : 0.01 : 50.1];
-% SigParamVar.f.v = [tmp; 3.*tmp]';
-% xaxisquantity = 'f.v';
-% xaxislabel = 'Signal frequency (Hz)';
-%---
-% round is needed to prevent rounding errors in WaveformGenerator algorithm!
-SigParamVar.L.v = round([1:0.05:10]./SigParam.f.v(1).*SigParam.fs.v);
-xaxisquantity = 'L.v';
-xaxislabel = 'Record length (samples)';
-%---
-% SigParamVar.fs.v = [4000 : 4000 : 96000];
-% xaxisquantity = 'fs.v';
-% xaxislabel = 'Sampling frequency (Hz)';
-%---
+% SigParamVar.f.v = [49.9 : 0.01 : 50.1];
+% SigParamVar.L.v = [1:0.05:10]./SigParam.f.v.*SigParam.fs.v;
+SigParamVar.fs.v = [4000 : 4000 : 96000];
 % SigParamVar.noise.v = logspace(-6, -3, 200);
-% xaxisquantity = 'noise.v';
-% xaxislabel = 'Noise (σ)';
 
 %% Additional parameters:
 SigParam.EstimationAlgorithm.v = 'PSFE';
@@ -50,6 +36,11 @@ CS.var.cleanfiles = 1;
 jobfn = qwtbvar('calc', 'gen_and_calc', SigParam, SigParamVar, CS);
 
 %% Plotting
+% x axis is based on variable:
+% xaxisquantity = 'noise.v';
+% xaxislabel = 'Noise (σ)';
+xaxisquantity = 'fs.v';
+xaxislabel = 'Sampling frequency (Hz)';
 
 % signal amplitude using fft with window:
 [x, AErrSigFFTWin] = qwtbvar('plot2D', jobfn, xaxisquantity, 'AErrSigFFTWin.v');

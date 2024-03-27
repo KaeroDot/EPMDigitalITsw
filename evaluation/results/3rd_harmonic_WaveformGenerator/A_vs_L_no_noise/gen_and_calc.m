@@ -20,7 +20,7 @@ function [DO, DI, CS] = gen_and_calc(DI, CS)
     % Because QWTBVAR still cannot return vectors:
     % keep 1st and 2nd peaks:
     DO.AErrSigFFTWin.v = DO.AErrSigFFTWin_all.v(1);
-                    % DO.AErrSigFFTWin_2.v = DO.AErrSigFFTWin_all.v(2);
+    DO.AErrSigFFTWin_2.v = DO.AErrSigFFTWin_all.v(2);
 
     % Path 2, sine fitting %<<<1
     Signal.fest.v = fEstimateForFit;
@@ -50,7 +50,7 @@ function [DO, DI, CS] = gen_and_calc(DI, CS)
     % Because QWTBVAR still cannot return vectors:
     % keep 1st and 2nd peaks:
     DO.AErrResSigFFT.v = DO.AErrResSigFFT_all.v(1);
-                % DO.AErrResSigFFT_2.v = DO.AErrResSigFFT_all.v(2);
+    DO.AErrResSigFFT_2.v = DO.AErrResSigFFT_all.v(2);
 
     % % ONLY FOR DEBUG:
     % % show all spectra together:
