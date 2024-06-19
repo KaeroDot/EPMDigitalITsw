@@ -34,8 +34,8 @@ available_methods = {'keepN',...
                     };
 if isfield(datain, 'method')
     if not(strcmpi(datain.method.v, available_methods))
-        msg = sprintf('%s, ', available_res_methods{:});
-        msg = sprintf('QWTB: SplineResample wrapper: required resampling method `%s` is not available. Only following values are permitted: %s', datain.res_method.v, msg);
+        msg = sprintf('%s, ', available_methods{:});
+        msg = sprintf('QWTB: SplineResample wrapper: required resampling method `%s` is not available. Only following values are permitted: %s', datain.method.v, msg);
         error(msg);
     end
 else
