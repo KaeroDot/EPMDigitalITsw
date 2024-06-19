@@ -55,6 +55,17 @@ end
 
 % Call resampling algorithm ---------------------------  %<<<1
 % Find out resampling parameters
+% Inputs/outputs of the resamplingParameters function:
+%   input parameters
+%     ts    is original sampling time in s
+%     N     is the original record length
+%     fEst  is the estimated fundamental component frequency
+%     div   (optional) is output sampling frequency divider (not affecting case 1), see *
+%   output parameters
+%     Output.Nr   are resulting number of samples 
+%     Output.tr   are resulting sampling times
+%     Output.p    are integer upsampling factors
+%     Output.q    are integer decimation factors
 [Output] = resamplingParameters(datain.Ts.v, N, datain.fest.v, div);
 % Get sampling period based on selected method:
 if strcmpi(datain.method.v, 'keepN')
