@@ -22,6 +22,8 @@ function [Output] = resamplingParameters(ts,N,fEst,div)
 %  * div > 1 (typically integer) will reduce the resampled bandwidth, so
 %  there should be no meaningfull spectral components above 1/(2*ts*div) or
 %  appropriate digital filtering shall be employed before resampling
+%
+%  Number of full signal cycles in the samples must be at least 1!
 
 if (nargin < 4)
   div = 1;
@@ -29,6 +31,9 @@ end
 
 ssfr = 1 / (ts*fEst);    % the actual sampling/signal frequency ratio
 Cycles = floor(N/ssfr);  % number of full cycles available
+if Cycles < 1
+    error(sprintf('Number of full cycles available must be 1 or greter. Cycles = floor(N*ts*fEst), Cycles=%d, N=%g, ts=%.16f, fEst=%.16f', Cycles, N, ts, fEst));
+end
 %   case 1  keep original N, so N = Output.Nr
 Nr = N;
 NewSamplingTime = (Cycles/fEst)/Nr;
