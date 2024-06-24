@@ -36,10 +36,11 @@ printf('-------------------------------\n')
 
 % Plot and compare both spectra.
 hold on
+semilogy(f, A, 'xk')
 semilogy(SpectrumNonCoherent.f.v, abs(SpectrumNonCoherent.A.v), '-k')
 semilogy(SpectrumResampled.f.v, abs(SpectrumResampled.A.v), '-r')
 hold off
 xlabel('Frequency (Hz)')
 ylabel('Signal amplitude')
-legend('original signal', 'resampled signal')
+legend('Simulated signal', 'FFT spectrum', 'Resampled and FFT spectrum')
 title('Signal spectra')
