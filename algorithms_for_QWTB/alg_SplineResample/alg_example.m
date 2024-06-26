@@ -1,6 +1,7 @@
-% Example for algorithm SplineResample.
+%% Example for algorithm SplineResample.
+% Algorithm use splines to resample sampled data to a new sampling frequency.
 
-% Generate sampled data
+%% Generate sampled data
 % Three quantities have to be prepared: time series |t| and signal |y|,
 % representing 2000 samples of sinus waveform of nominal frequency 49.77 Hz, nominal
 % amplitude 1 V and nominal phase 0 rad, sampled with sampling period 0.25 ms.
@@ -10,31 +11,32 @@ A = 1;
 N = 2000;
 fs = 4000;
 Ts = 1/fs;
-DI.t.v = (0:N-1)*Ts;
-DI.y.v = A*sin(2*pi*f*DI.t.v);
-% Set estimate of signal frequency to exact signal frequency and resampling method to keep the number of samples.
-DI.fest.v = f;
-DI.method.v = 'keepN';
+Sampled.t.v = [0 : N-1] * Ts;
+Sampled.y.v = A*sin(2 * pi * f * Sampled.t.v);
 
-% Call algorithm SplineResample
-DO = qwtb('SplineResample', DI);
+%% Signal frequency estimate
+% Get estimate of signal frequency to be coherent after resampling. For
+% example, algorithm PSFE can be used:
+Estimate = qwtb('PSFE', Sampled);
+Sampled.fest.v = Estimate.f.v;
 
-% Get spectra of both signals for plotting
-SpectrumNonCoherent = qwtb('SP-WFFT', DI);
-SpectrumResampled = qwtb('SP-WFFT', DO);
+%% Call algorithm
+Resampled = qwtb('SplineResample', Sampled);
 
-% Compare amplitude of the main signal component:
-printf('-------------------------------\n')
+%% Get spectra
+SpectrumNonCoherent = qwtb('SP-WFFT', Sampled);
+SpectrumResampled = qwtb('SP-WFFT', Resampled);
+
+%% Compare estimated amplitudes
 printf('Frequency and amplitude of main signal component.\n');
 printf('Simulated:                      f = %.2f, A = %.5f\n', f, A)
 id = find(SpectrumNonCoherent.A.v == max(SpectrumNonCoherent.A.v));
 printf('As estimated\n')
 printf('Non coherent sampling and FFT:  f = %.2f, A = %.5f\n', SpectrumNonCoherent.f.v(id), SpectrumNonCoherent.A.v(id));
 id = find(SpectrumResampled.A.v == max(SpectrumResampled.A.v));
-printf('Resampled to coherent and FFT): f = %.2f, A = %.5f\n', SpectrumResampled.f.v(id), SpectrumResampled.A.v(id));
-printf('-------------------------------\n')
+printf('Resampled to coherent and FFT: f = %.2f, A = %.5f\n', SpectrumResampled.f.v(id), SpectrumResampled.A.v(id));
 
-% Plot and compare both spectra.
+%% Plot
 hold on
 semilogy(f, A, 'xk')
 semilogy(SpectrumNonCoherent.f.v, abs(SpectrumNonCoherent.A.v), '-k')
