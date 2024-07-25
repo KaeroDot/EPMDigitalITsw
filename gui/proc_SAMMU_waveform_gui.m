@@ -72,8 +72,8 @@ function was_user_action = ensure_qwtb_path() %<<<2
     % all failed, ask user to find qwtb path and save it to preferences, or
     % automatically download qwtb and required algs:
     was_user_action = 1; % note to outer function that user had to setup QWTB
-    message = sprintf('QWTB not found in octave path.\n Do you want to select a directory in your computer with QWTB, or to automatically download and setup?');
-    btn1 = 'Select directory';
+    message = sprintf('QWTB not found in octave path.\n Do you want to select an existing directory in your computer with QWTB, or to automatically download and setup?');
+    btn1 = 'Select existing directory';
     btn2 = 'Automatically download and setup';
     btn3 = 'Quit';
     res = questdlg (message, 'QWTB not found', btn1, btn2, btn3, btn1);
@@ -128,7 +128,7 @@ function download_QWTB() %<<<2
     global GUIname
     % Zip url: 
     qwtb_url = 'https://github.com/qwtb/qwtb/archive/refs/heads/master.zip';
-    h_msgbox = msgbox(sprintf('Downloading and setting up QWTB, please wait.\nIf you use Matlab, please wait very long time.\nQWTB url is:\n%s', qwtb_url));
+    h_msgbox = msgbox(sprintf('Downloading and setting up QWTB, please wait.\nThis message will close when finished.\n(If you use Matlab, please wait very long time.)\nQWTB url is:\n%s', qwtb_url));
     try
         download_and_unzip(qwtb_url);
         qwtb_path = fullfile(pwd, 'qwtb-master', 'qwtb');
@@ -154,7 +154,7 @@ function download_Digital_IT() %<<<2
     global GUIname
     % Zip url: 
     digit_url = 'https://github.com/KaeroDot/EPMDigitalITsw/archive/refs/heads/main.zip';
-    h_msgbox = msgbox(sprintf('Downloading additional algorithms from DigitalIT repository, please wait.\nIf you use Matlab, please wait very long time.\nUrl is:\n%s', digit_url));
+    h_msgbox = msgbox(sprintf('Downloading additional algorithms from DigitalIT repository, please wait.\nThis message will close when finished.\n(If you use Matlab, please wait very long time.)\nUrl is:\n%s', digit_url));
     try
         download_and_unzip(digit_url);
         digit_path = fullfile(pwd, 'EPMDigitalITsw-main', 'algorithms_for_QWTB');
@@ -420,7 +420,7 @@ function b_datafile_callback(hsrc, evt) %<<<2
         DIR = pwd;
         NAME = '';
     end
-    [fname, fpath, fltidx] = uigetfile(fullfile(DIR, NAME), ...
+    [fname, fpath, fltidx] = uigetfile(DIR, ...
                                        'Select file with sampled data', ...
                                        datafile, ...
                                        'MultiSelect', 'off');
@@ -608,17 +608,19 @@ function proc_SAMMU_waveform(udata) %<<<2
         % if cancel:
         if user_cancel
             % quit this script
-            close(h_wb)
+            % in matlab, close(waitbar_handle) does not work. One have to use delete.
+            delete(h_wb);
             return
         end
     end
 
     % close waitbar:
-    close(h_wb);
-
-    present_results(DO, udata);
+    % in matlab, close(waitbar_handle) does not work. One have to use delete.
+    delete(h_wb);
 
     % plot estimated amplitudes, phases, frequencies of the main component:
+    present_results(DO, DI, y, udata);
+
 end % function proc_SAMMU_waveform
 
 function waitbar_cancel_callback(varargin) %<<<2
@@ -653,15 +655,20 @@ function present_results(DO, DI, y, udata) %<<<2
     famp = figure;
     % becuase of dumb matlab, one have to do it part by part:
     tmp = [DO{:}];
-
-    plot([[[DO{:}].A].v], '-x');
-    title(sprintf('amplitude\n%s', udata.datafile), 'interpreter', 'none');
+    tmp = [tmp.A];
+    tmp = [tmp.v];
+    plot(tmp, '-x');
+    title(sprintf('Main signal amplitude\n%s', udata.datafile), 'interpreter', 'none');
     xlabel('section index');
     ylabel('amplitude (V)');
 
     fph = figure;
-    plot([[[DO{:}].ph].v], '-x');
-    title(sprintf('phase\n%s', udata.datafile), 'interpreter', 'none');
+    % becuase of dumb matlab, one have to do it part by part:
+    tmp = [DO{:}];
+    tmp = [tmp.ph];
+    tmp = [tmp.v];
+    plot(tmp, '-x');
+    title(sprintf('Main signal phase\n%s', udata.datafile), 'interpreter', 'none');
     xlabel('section index');
     ylabel('phase (rad)');
 
