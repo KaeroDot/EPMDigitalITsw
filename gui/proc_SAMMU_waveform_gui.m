@@ -29,7 +29,7 @@ end % function
 
 %% functions for QWTB & DigitalIT installation %<<<1
 function q = qwtb_in_path %<<<2
-    q = exist('qwtb');
+    q = exist('qwtb', 'file');
 end % function qwtb_in_path
 
 function q = digit_algs_in_qwtb %<<<2
@@ -78,7 +78,7 @@ function was_user_action = ensure_qwtb_path() %<<<2
     btn3 = 'Quit';
     res = questdlg (message, 'QWTB not found', btn1, btn2, btn3, btn1);
     if strcmp(res, btn1)
-        qwtb_path = uigetdir('', 'Select directory with QWTB')
+        qwtb_path = uigetdir('', 'Select directory with QWTB');
         if not(ischar(qwtb_path))
             % user pressed cancel on ui dialog
             error('User aborted')
@@ -106,9 +106,8 @@ function was_user_action = ensure_digit_algs() %<<<2
 % function ensures the digitalit algorithms are available in QWTB
 % returns info if there was interacion with user
     was_user_action = 0;
-    global GUIname
     % do nothing if algs already in path:
-    if digit_algs_in_qwtb
+    if digit_algs_in_qwtb()
         return
     end
     % ask user to add algorithms by himself or automatically download algs:
@@ -280,7 +279,7 @@ function make_gui() %<<<2
     uig.col = uig.col + 1;
     % listbox with algorithms
     tmp = find(strcmpi(udata.alg, udata.available_algorithms));
-    if isempty(tmp) tmp = 1; end
+    if isempty(tmp); tmp = 1; end
     p_alg = uicontrol(f_main, ...
                         'tag',      'p_alg', ...
                         'Style',    'popupmenu', ...
@@ -358,7 +357,7 @@ function make_gui() %<<<2
                         'position',  uigrid_position(uig, 4));
 end
 
-function position = uigrid_position(uig, varargin); %<<<2
+function position = uigrid_position(uig, varargin) %<<<2
 % calculates proper values for position of ui elements.
 % first input - See definition of uig structure in make_gui()
 % second input - optional multiplier for width
@@ -393,21 +392,21 @@ function get_udata_from_pref() %<<<2
     if not(isfield(udata, 'alg'))
         udata.alg = 'SplineResample';
     end
-    if not(isfield(udata, 'datafile'));
+    if not(isfield(udata, 'datafile'))
         udata.datafile = '';
     end
-    if not(isfield(udata, 'split'));
+    if not(isfield(udata, 'split'))
         udata.split = 0;
     end
-    if not(isfield(udata, 'fs'));
+    if not(isfield(udata, 'fs'))
         udata.fs = 4000;
     end
-    if not(isfield(udata, 'fest'));
+    if not(isfield(udata, 'fest'))
         udata.fest = 50;
     end
 end % function
 
-function b_datafile_callback(hsrc, evt) %<<<2
+function b_datafile_callback(~, ~) %<<<2
 % What happens when button 'Select datafile..' is pressed
 % show filepath dialog
 
@@ -415,12 +414,11 @@ function b_datafile_callback(hsrc, evt) %<<<2
     datafile = get(t_datafile, 'string');
 
     if not(isempty(datafile))
-        [DIR, NAME, EXT] = fileparts(datafile);
+        [DIR, ~, ~] = fileparts(datafile);
     else
         DIR = pwd;
-        NAME = '';
     end
-    [fname, fpath, fltidx] = uigetfile(DIR, ...
+    [fname, fpath, ~] = uigetfile(DIR, ...
                                        'Select file with sampled data', ...
                                        datafile, ...
                                        'MultiSelect', 'off');
@@ -430,7 +428,7 @@ function b_datafile_callback(hsrc, evt) %<<<2
     end
 end % function
 
-function b_calc_callback(hsrc, evt) %<<<2
+function b_calc_callback(~, ~) %<<<2
 % What happens when button Calculate is pressed
 % get inputs, check inputs, runs calculation if inputs ok
     global udata
@@ -441,7 +439,7 @@ function b_calc_callback(hsrc, evt) %<<<2
     udata.alg = udata.available_algorithms{algvalue};
     % udata.datafile
     datafile = get(find_h_by_tag('t_datafile'), 'string');
-    if not(exist(datafile))
+    if not(exist(datafile, 'file'))
         msgbox(['The filename `' datafile '` does not exist!'], ...
                'Input error', ...
                'modal');
@@ -449,7 +447,7 @@ function b_calc_callback(hsrc, evt) %<<<2
     end
     udata.datafile = datafile;
     % udata.split
-    split = str2num(get(find_h_by_tag('i_split'), 'string'))
+    split = str2num(get(find_h_by_tag('i_split'), 'string'));
     if (isempty(split) || split < 0)
         msgbox('The input `Split by (s)` must contain a non-negative real number!', ...
                'Input error', ...
@@ -555,7 +553,7 @@ function proc_SAMMU_waveform(udata) %<<<2
     %% Process the data %<<<3
     samples_in_period = DI.fs.v./DI.fest.v;
     % check if signal got at least one period of the sample:
-    if numel(y) < samples_in_period;
+    if numel(y) < samples_in_period
         errormsg = sprintf('Error: Data does not contain even single period of the signal, aborting. Samples in data file: %d. Samples in one period of the signal: %d', numel(y), samples_in_period);
         errmsg(errormsg);
         error(errormsg);
@@ -605,7 +603,8 @@ function proc_SAMMU_waveform(udata) %<<<2
         DI.y.v = y(st : en);
         % calculate
         DO{j} = calculate(DI, udata.alg);
-        % if cancel:
+        % if canceled (user_cancel can be called by a waitbar callback
+        % function):
         if user_cancel
             % quit this script
             % in matlab, close(waitbar_handle) does not work. One have to use delete.
@@ -647,7 +646,7 @@ end % function calculate
 
 function present_results(DO, DI, y, udata) %<<<2
 % Show figures with calculated data
-    [DIR, NAME, EXT] = fileparts(udata.datafile);
+    [DIR, NAME, ~] = fileparts(udata.datafile);
     % save results
     save([fullfile(DIR, NAME) '-results.mat'], 'DO', 'DI', 'y', 'udata');
     
