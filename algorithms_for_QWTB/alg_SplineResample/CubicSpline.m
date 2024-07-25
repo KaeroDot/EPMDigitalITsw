@@ -162,8 +162,7 @@ classdef CubicSpline
             else
                 % Using bsxfun. Faster for smaller number of elements (<1e4).
                 % Slower for larger number of elements and memory demanding.
-                indexes = reshape(sum(bsxfun(@le, obj.x(:), x_eval(:).'), 1),
-                size(x_eval)); 
+                indexes = reshape(sum(bsxfun(@le, obj.x(:), x_eval(:).'), 1), size(x_eval)); 
                 % Now size(indexes) is same as size(x_eval)
                 for k = 1:numel(x_eval)
                     dx = x_eval(k) - obj.x(indexes(k));
