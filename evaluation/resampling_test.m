@@ -17,16 +17,18 @@ SigParam.A.v = [1];       % nominal amplitude (V)
 SigParam.ph.v = [0];      % nominal signal phase (rad)
 SigParam.O.v = [0];      % nominal signal offset (V)
 % 3rd harmonic:
-    % SigParam.f.v = [50 150];      % nominal signal frequency (Hz)
-    % SigParam.A.v = [1 0.1];       % nominal amplitude (V)
-    % SigParam.ph.v = [0 0];      % nominal signal phase (rad)
-    % SigParam.O.v = [0 0];      % nominal signal offset (V)
+if multiple_harmonics
+    SigParam.f.v = [50 150];      % nominal signal frequency (Hz)
+    SigParam.A.v = [1 0.1];       % nominal amplitude (V)
+    SigParam.ph.v = [0 0];      % nominal signal phase (rad)
+    SigParam.O.v = [0 0];      % nominal signal offset (V)
+end
 SigParam.fs.v = 96e3;   % nominal sampling frequency (Hz)
 SigParam.M.v = 5;      % length of the record in multiple of periods
 % SigParam.L.v = 20./SigParam.f.v.*SigParam.fs.v;   % that is 20 periods at 50 Hz
 SigParam.THD.v = 1e-3;  % nominal harmonic distortion
 SigParam.nharm.v = 1;   % nominal number of harmonics
-SigParam.noise.v = 1e-6;% nominal signal noise (V)
+SigParam.noise.v = 0;% nominal signal noise (V)
 % Additional parameters:
 SigParam.EstimationAlgorithm.v = 'PSFE';  % Estimation algorithm used for resampling
 SigParam.ResamplingMethod.v = 'keepn';  %Resampling method of the SplineResample algorithm
@@ -47,7 +49,9 @@ SigParam.SineFitAlgorithm.v = 'FPNLSF';  % Algorithm for sine fitting:
 %---
 % signal frequency
 SigParamVar.f.v = [49.9 : 0.0001 : 50.1];
-% SigParamVar.f.v = [SigParamVar.f.v; 3.*SigParamVar.f.v]';
+if multiple_harmonics
+    SigParamVar.f.v = [SigParamVar.f.v; 3.*SigParamVar.f.v]';
+end
 % set same value for number of samples instead the number of periods:
 SigParam = rmfield(SigParam, 'M');
 SigParam.L.v = 2./SigParam.f.v(1).*SigParam.fs.v; % 5 periods at 50 Hz, % Results differ for 2 or 5 periods
@@ -162,7 +166,7 @@ plot(ndaxes.values{1}(:, 1), phErrFFTWin(1, :), '-k',...
      ndaxes.values{1}(:, 1), phErrEst(1, :), '-+b',...
      ndaxes.values{1}(:, 1), phErrResFFT(1, :), '-r');
 xlabel(xaxislabel)
-ylabel('Error from nominal value (V)')
+ylabel('Error from nominal value (rad), wrapped to -pi..pi')
 legend('ph: FFT, window',...
        'ph: sine fit',...
        'ph: PSFE estimate',...
@@ -183,7 +187,7 @@ if multiple_harmonics
          ndaxes.values{1}(:, 1), phErrEst(2, :), '-+b',...
          ndaxes.values{1}(:, 1), phErrResFFT(2, :), '-r');
     xlabel(xaxislabel)
-    ylabel('Error from nominal value (V)')
+    ylabel('Error from nominal value (rad), wrapped to -pi..pi')
     legend('ph: FFT, window',...
            'ph: sine fit',...
            'ph: PSFE estimate',...
