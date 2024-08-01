@@ -72,12 +72,14 @@ function was_user_action = ensure_qwtb_path() %<<<2
     % all failed, ask user to find qwtb path and save it to preferences, or
     % automatically download qwtb and required algs:
     was_user_action = 1; % note to outer function that user had to setup QWTB
-    message = sprintf('QWTB not found in octave path.\n Do you want to select an existing directory in your computer with QWTB, or to automatically download and setup?');
-    btn1 = 'Select existing directory';
-    btn2 = 'Automatically download and setup';
-    btn3 = 'Quit';
-    res = questdlg (message, 'QWTB not found', btn1, btn2, btn3, btn1);
+    message = sprintf('QWTB was not found in octave path.\n Do you want to automatically download and setup? If you already have got QWTB, you can select an existing directory in your computer with the QWTB.');
+    btn1 = 'Automatically download and setup';
+    btn2 = 'Select existing directory';
+    btn3 = 'Abort';
+    res = questdlg (message, 'QWTB was not found', btn1, btn2, btn3, btn1);
     if strcmp(res, btn1)
+        download_QWTB();
+    elseif strcmp(res, btn2)
         qwtb_path = uigetdir('', 'Select directory with QWTB');
         if not(ischar(qwtb_path))
             % user pressed cancel on ui dialog
@@ -94,9 +96,6 @@ function was_user_action = ensure_qwtb_path() %<<<2
             errordlg(errmsg, GUIname)
             error(errmsg)
         end % if
-
-    elseif strcmp(res, btn2)
-        download_QWTB();
     else
         error('User aborted')
     end % if strcmp
