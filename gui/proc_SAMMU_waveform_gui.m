@@ -20,7 +20,7 @@ function proc_SAMMU_waveform_gui() %<<<1
     digit_user_action = ensure_digit_algs();
 
     if any([qwtb_user_action digit_user_action])
-        msgbox('Both QWTB and DigitalIT algorithms now seems to be working.');
+        msgbox(sprintf('Both QWTB and DigitalIT algorithms now seems to be working.\nIn the GUI window, you can press button `Calculate` and the example data will be processed.'));
     end
 
     % Run the GUI
@@ -155,7 +155,8 @@ function download_Digital_IT() %<<<2
     h_msgbox = msgbox(sprintf('Downloading additional algorithms from DigitalIT repository, please wait.\nThis message will close when finished.\n(If you use Matlab, please wait very long time.)\nUrl is:\n%s', digit_url));
     try
         download_and_unzip(digit_url);
-        digit_path = fullfile(pwd, 'EPMDigitalITsw-main', 'algorithms_for_QWTB');
+        downloaded_extracted_zip_path = fullfile(pwd, 'EPMDigitalITsw-main');
+        digit_path = fullfile(downloaded_extracted_zip_path, 'algorithms_for_QWTB');
         % (because of matlab incompetence, one cannot copy directory as
         % 'path/dir'->'path2', because it only copies all files in dir to a
         % path2. One must copy 'path/dir'->'path2/dir')
@@ -163,6 +164,9 @@ function download_Digital_IT() %<<<2
         if not(digit_algs_in_qwtb)
             error('DigitalIT algorithms not found in QWTB.')
         end
+        % copy demo data file:
+        copyfile(fullfile(downloaded_extracted_zip_path, 'gui/testdata_fs=4000_f=49.9-50.csv'), ...
+            fullfile(pwd, 'testdata_fs=4000_f=49.9-50.csv'));
     catch ERR
         % qwtb still not found
         errmsg = sprintf('Cannot download/unzip/add DigitalIT algorithms... Ask author to fix it. The error message was:\n%s', ERR.message);
@@ -392,10 +396,10 @@ function get_udata_from_pref() %<<<2
         udata.alg = 'SplineResample';
     end
     if not(isfield(udata, 'datafile'))
-        udata.datafile = '';
+        udata.datafile = 'testdata_fs=4000_f=49.9-50.csv';
     end
     if not(isfield(udata, 'split'))
-        udata.split = 0;
+        udata.split = 1;
     end
     if not(isfield(udata, 'fs'))
         udata.fs = 4000;
