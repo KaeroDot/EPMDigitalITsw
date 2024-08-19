@@ -361,7 +361,17 @@ function make_gui(welcome_message) %<<<2
                         'callback',  @b_calc_callback, ...
                         'units',     'characters', ...
                         'tooltipstring', sprintf('Start the calculations.\nFill all inputs before pushing this button.'), ...
-                        'position',  uigrid_position(uig, 4));
+                        'position',  uigrid_position(uig, 3));
+
+    uig.col = uig.col + 3;
+    % button Help
+    b_help = uicontrol (f_main, ...
+                        'tag',      'b_help', ...
+                        'string',    'Help', ...
+                        'callback',  @b_help_callback, ...
+                        'units',     'characters', ...
+                        'tooltipstring', sprintf('Show help in web browser.'), ...
+                        'position',  uigrid_position(uig));
 
     % show welcome message about successful install if required:
     if welcome_message
@@ -509,6 +519,12 @@ function b_calc_callback(~, ~) %<<<2
     proc_SAMMU_waveform(udata)
 
 end % function b_calc_callback
+
+function b_help_callback(~, ~) %<<<2
+% What happens when button Help is pressed
+% open web page, hardcoded
+web('https://github.com/KaeroDot/EPMDigitalITsw/blob/main/gui/proc_SAMMU_waveform_gui_help.md', '-browser')
+end % function b_help_callback
 
 function h = find_h_by_tag(tag) %<<<2
 % finds handle to uicontrol defined by a value in tag

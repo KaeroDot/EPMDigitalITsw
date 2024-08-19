@@ -52,6 +52,7 @@ Main window:
   signal frequency, that is used in the calculation algorithms. E.g. for power
   measurement 50 Hz is sufficient estimate.
 - Button "Calculate" runs the calculation.
+- Button "Help" shows this help.
 
 ## Data file formats
 The script can process data files with the following content:
