@@ -165,8 +165,8 @@ function download_Digital_IT() %<<<2
             error('DigitalIT algorithms not found in QWTB.')
         end
         % copy demo data file:
-        copyfile(fullfile(downloaded_extracted_zip_path, 'gui/testdata_fs=4000_f=49.9-50.csv'), ...
-            fullfile(pwd, 'testdata_fs=4000_f=49.9-50.csv'));
+        copyfile(fullfile(downloaded_extracted_zip_path, 'gui/testdata_simple_csv_fs=4000_f=49.9-50.csv'), ...
+            fullfile(pwd, 'testdata_simple_csv_fs=4000_f=49.9-50.csv'));
     catch ERR
         % qwtb still not found
         errmsg = sprintf('Cannot download/unzip/add DigitalIT algorithms... Ask author to fix it. The error message was:\n%s', ERR.message);
@@ -396,7 +396,7 @@ function get_udata_from_pref() %<<<2
         udata.alg = 'SplineResample';
     end
     if not(isfield(udata, 'datafile'))
-        udata.datafile = 'testdata_fs=4000_f=49.9-50.csv';
+        udata.datafile = 'testdata_simple_csv_fs=4000_f=49.9-50.csv';
     end
     if not(isfield(udata, 'split'))
         udata.split = 1;
@@ -530,11 +530,17 @@ function y = load_datafile(filename) %<<<2
             if pcapfile
                 disp('Identified csv file with output from Wireshark.')
                 y = load_pcap_csv_file(filename);
+                % datafile records must be in rows - one row is one record, more rows means
+                % more signals! however csv files are in collumns, so make transposition:
+                y = y';
             else
                 % csv file is not output from pcap file exported by wireshark, it is
                 % probably simple csv file
                 disp('Identified simple csv file.')
                 y = load(filename);
+                % datafile records must be in rows - one row is one record, more rows means
+                % more signals! however csv files are in collumns, so make transposition:
+                y = y';
             end
         else
             error('Type of the datafile not supported. Please read documentation.')
@@ -556,6 +562,8 @@ function y = load_datafile(filename) %<<<2
         errmsg(errormsg);
         error(errormsg);
     end
+
+    printf('Size of data is: % d waveform(s), %d samples in each waveform.\n', size(y, 1), size(y, 2))
 end % function load_datafile
 
 function y = load_pcap_csv_file(filename) %<<<2
@@ -595,24 +603,31 @@ function proc_SAMMU_waveform(udata) %<<<2
                 % end
 
     %% load datafile %<<<3
+    % (datafile records must be in rows - one row is one record, more rows means
+    % more signals!)
     y = load_datafile(udata.datafile);
-    % set other properties:
-    DI.fs.v = udata.fs;
-    DI.fest.v = udata.fest;
-        % test data, only for DEBUG:
+        % % test data, only for DEBUG:
         % split = 3/50 % in seconds
         % DI.fs.v = 4e3;
         % t = [0:1/4000:5];
         % f = linspace(49.9, 50.1, numel(t));
         % y = 1.3.*sin(2.*pi.*f.*t + 0.2.*pi);
         % y = y + normrnd(0, 1e-1, size(y));
+        % y = [y; 1.*sin(2.*pi.*f.*t)];
         % DI.fest.v = 50;
+
+    waveforms = size(y, 1); % number of waveforms in the data
+    samples = size(y, 2); % number of samples in the record
+    udata.waveforms = waveforms;
+    % set other properties:
+    DI.fs.v = udata.fs;
+    DI.fest.v = udata.fest;
 
     %% Process the data %<<<3
     samples_in_period = DI.fs.v./DI.fest.v;
     % check if signal got at least one period of the sample:
-    if numel(y) < samples_in_period
-        errormsg = sprintf('Error: Data does not contain even single period of the signal, aborting. Samples in data file: %d. Samples in one period of the signal: %d', numel(y), samples_in_period);
+    if samples < samples_in_period
+        errormsg = sprintf('Error: Data does not contain even single period of the signal, aborting. Samples in the record: %d. Samples in one period of the signal: %d', samples, samples_in_period);
         errmsg(errormsg);
         error(errormsg);
     end
@@ -620,14 +635,14 @@ function proc_SAMMU_waveform(udata) %<<<2
     % data will be split into this number of sections: 'split_sections'
     if udata.split == 0
         % no splitting
-        samples_in_section = numel(y);
+        samples_in_section = samples;
         split_sections = 1; % only one section with whole signal
     else
         % splitting
         samples_in_section = floor(DI.fs.v .* udata.split);
-        split_sections = ceil(numel(y) ./ samples_in_section);
+        split_sections = ceil(samples ./ samples_in_section);
         % check if last section got at least one period of the signal:
-        if mod(numel(y), samples_in_section) < samples_in_period
+        if mod(samples, samples_in_section) < samples_in_period
             % Last section got less samples than one period of the signal
             comment = sprintf('\nLast section got less samples than one signal period and will be discarded.');
             split_sections = split_sections - 1;
@@ -644,39 +659,43 @@ function proc_SAMMU_waveform(udata) %<<<2
 
    %% for all sections calcualte %<<<3
     for j = 1 : split_sections
-        % update waitbar
-        waitbar(j./split_sections, h_wb, sprintf('Calculating section %d / %d. %s', j, split_sections, comment));
-        % indexes of the data start/end of the actual section:
-        st = 1 + (j-1).*samples_in_section;
-        en = j.*samples_in_section;
-        if (st > numel(y))
-            % some error, stop for loop:
-            break
-        end
-        if (en > numel(y))
-            % last section can contain less data than all other sections:
-            en = numel(y);
-        end
-        % cut the data:
-        DI.y.v = y(st : en);
-        % calculate
-        DO{j} = calculate(DI, udata.alg);
-        % if canceled (user_cancel can be called by a waitbar callback
-        % function):
-        if user_cancel
-            % quit this script
-            % in matlab, close(waitbar_handle) does not work. One have to use delete.
-            delete(h_wb);
-            return
-        end
-    end
+       % for all waveforms calcualte
+       for k = 1 : waveforms
+            % update waitbar
+            waitbar(j./split_sections, h_wb, sprintf('Calculating section %d / %d. %s', j, split_sections, comment));
+            % indexes of the data start/end of the actual section:
+            st = 1 + (j-1).*samples_in_section;
+            en = j.*samples_in_section;
+            if (st > samples)
+                % some error, stop for loop:
+                break
+            end
+            if (en > samples)
+                % last section can contain less data than all other sections:
+                en = samples;
+            end
+            % cut the data:
+            DI.y.v = y(k, st : en);
+            DIcell{k, j} = DI; % store inputs for reference
+            % calculate
+            [DOmain{k, j}, DOspectrum{k, j}] = calculate(DI, udata.alg);
+            % if canceled (user_cancel can be called by a waitbar callback
+            % function):
+            if user_cancel
+                % quit this script
+                % in matlab, close(waitbar_handle) does not work. One have to use delete.
+                delete(h_wb);
+                return
+            end
+        end % for k
+    end % for j
 
     % close waitbar:
     % in matlab, close(waitbar_handle) does not work. One have to use delete.
     delete(h_wb);
 
     % plot estimated amplitudes, phases, frequencies of the main component:
-    present_results(DO, DI, y, udata);
+    present_results(DOmain, DOspectrum, DIcell, y, udata);
 
 end % function proc_SAMMU_waveform
 
@@ -685,7 +704,7 @@ function waitbar_cancel_callback(varargin) %<<<2
     user_cancel = 1;
 end % function
 
-function DO = calculate(DI, algid) %<<<2
+function [main, ResampledSignalSpectrum] = calculate(DI, algid) %<<<2
 % Calculate result
         % XXX disable qwtb checks for all loops but first one
 
@@ -696,38 +715,57 @@ function DO = calculate(DI, algid) %<<<2
     ResampledSignal.window.v = 'rect';
     ResampledSignalSpectrum = qwtb('SP-WFFT', ResampledSignal);
 
-    % Find highest peak and record amplitudes evaluated by rectangular FFT:
+    % Find highest peak and record amplitudes evaluated by rectangular FFT for
+    % all available harmonics:
     idx = find(ResampledSignalSpectrum.A.v == max(ResampledSignalSpectrum.A.v));
-    DO.A.v = ResampledSignalSpectrum.A.v(idx);
-    DO.ph.v = ResampledSignalSpectrum.ph.v(idx);
+    if isempty(idx)
+        main.A.v = NaN;
+        main.ph.v = NaN;
+    end
+    idx = idx(1);
+    main.A.v = ResampledSignalSpectrum.A.v(idx);
+    main.ph.v = ResampledSignalSpectrum.ph.v(idx);
 end % function calculate
 
-function present_results(DO, DI, y, udata) %<<<2
+function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
 % Show figures with calculated data and save results to a file
     [DIR, NAME, ~] = fileparts(udata.datafile);
     % save results
-    save([fullfile(DIR, NAME) '-results.mat'], 'DO', 'DI', 'y', 'udata');
+    save([fullfile(DIR, NAME) '-results.mat'], 'DOmain', 'DOspectrum', 'DI', 'y', 'udata');
     
     % make figures
+    % prepare legend:
+    for j = 1:udata.waveforms
+        leg{j} = sprintf('wavewform %d', j);
+    end % for j
     famp = figure;
     % becuase of dumb matlab, one have to do it part by part:
-    tmp = [DO{:}];
+    tmp = [DOmain{:}];
     tmp = [tmp.A];
     tmp = [tmp.v];
-    plot(tmp, '-x');
+    tmp = reshape(tmp, udata.waveforms, []);
+    % prepare xaxis:
+    % (add half of the plit time to plot values in the 'middle' of the split
+    % time region)
+    t = udata.split .* [0 : 1 : size(tmp, 2) - 1] + udata.split./2;
+    t = repmat(t, udata.waveforms, 1);
+    plot(t', tmp', '-x');
     title(sprintf('Main signal amplitude\n%s', udata.datafile), 'interpreter', 'none');
-    xlabel('section index');
+    xlabel('time (s)');
     ylabel('amplitude (V)');
+    legend(leg);
 
     fph = figure;
     % becuase of dumb matlab, one have to do it part by part:
-    tmp = [DO{:}];
+    tmp = [DOmain{:}];
     tmp = [tmp.ph];
     tmp = [tmp.v];
-    plot(tmp, '-x');
+    tmp = reshape(tmp, udata.waveforms, []);
+    plot(t', tmp', '-x');
     title(sprintf('Main signal phase\n%s', udata.datafile), 'interpreter', 'none');
-    xlabel('section index');
+    xlabel('time (s)');
     ylabel('phase (rad)');
+    legend(leg);
 
     % save figures
     saveas(fph, [fullfile(DIR, NAME) '-amplitude.fig']);
