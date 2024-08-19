@@ -7,11 +7,11 @@ function proc_SAMMU_waveform_gui() %<<<1
     % Define constants
     GUIname = 'proc_SAMMU_waveform_gui';
     udata.available_algorithms = {'SplineResample & FFT'}; % XXX remove? will be as an input?
-    udata.alg = ''; % selected algorithm id
-    udata.datafile = ''; % file with sampled data
-    udata.split = ''; % data split period
-    udata.fs = ''; % sampling frequency
-    udata.fest = ''; % signal frequency estimate
+    udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
+    udata.datafile = ''; % file with sampled data (default value see get_udata_from_pref)
+    udata.split = ''; % data split period (default value see get_udata_from_pref)
+    udata.fs = ''; % sampling frequency (default value see get_udata_from_pref)
+    udata.fest = ''; % signal frequency estimate (default value see get_udata_from_pref)
 
     % Ensure system is working
     % ensure qwtb path
@@ -395,6 +395,7 @@ end % function
 function get_udata_from_pref() %<<<2
 % loads user data structure from user preferences and ensure all fields exists
 % with at least nominal values
+% default values are also defined here
     global GUIname
     global udata
 
@@ -402,18 +403,34 @@ function get_udata_from_pref() %<<<2
         udata = getpref(GUIname, 'udata');
     end
     if not(isfield(udata, 'alg'))
-        udata.alg = 'SplineResample';
+        udata.alg = '';
     end
     if not(isfield(udata, 'datafile'))
-        udata.datafile = 'testdata_simple_csv_fs=4000_f=49.9-50.csv';
+        udata.datafile = '';
     end
     if not(isfield(udata, 'split'))
-        udata.split = 1;
+        udata.split = '';
     end
     if not(isfield(udata, 'fs'))
-        udata.fs = 4000;
+        udata.fs = '';
     end
     if not(isfield(udata, 'fest'))
+        udata.fest = '';
+    end
+    % default values if empty data:
+    if isempty(udata.alg)
+        udata.alg = 'SplineResample';
+    end
+    if isempty(udata.datafile)
+        udata.datafile = 'testdata_simple_csv_fs=4000_f=49.9-50.csv';
+    end
+    if not(isnumeric(udata.split))
+        udata.split = 1;
+    end
+    if not(isnumeric(udata.fs))
+        udata.fs = 4000;
+    end
+    if not(isnumeric(udata.fest))
         udata.fest = 50;
     end
 end % function
