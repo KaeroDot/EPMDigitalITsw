@@ -41,14 +41,14 @@ end % function qwtb_in_path
 function add_qwtb_path_to_pref(qwtb_path) %<<<2
     global GUIname
     % function adds qwtb path to a user preferences
-    setpref (GUIname, 'qwtb_path', qwtb_path)
+    setpref(GUIname, 'qwtb_path', qwtb_path);
 end % function add_qwtb_path_to_pref
 
 function qwtb_path = get_qwtb_path_from_pref() %<<<2
     global GUIname
     if ispref(GUIname, 'qwtb_path')
         qwtb_path = getpref (GUIname, 'qwtb_path');
-        addpath(qwtb_path)
+        addpath(qwtb_path);
     end
 end % function get_qwtb_path_from_pref
 
@@ -64,7 +64,7 @@ function was_user_action = ensure_qwtb_path() %<<<2
     % try to load setting from preferences
     if ispref(GUIname,'qwtb_path')
         qwtb_path = getpref (GUIname, 'qwtb_path');
-        addpath(qwtb_path)
+        addpath(qwtb_path);
         if qwtb_in_path
             return
         end
@@ -421,7 +421,8 @@ function b_datafile_callback(~, ~) %<<<2
     else
         DIR = pwd;
     end
-    [fname, fpath, ~] = uigetfile(DIR, ...
+    fn = fullfile(DIR, '*.*'); % open all types of files
+    [fname, fpath, ~] = uigetfile(fn, ...
                                        'Select file with sampled data', ...
                                        datafile, ...
                                        'MultiSelect', 'off');
