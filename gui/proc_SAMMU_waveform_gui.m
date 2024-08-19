@@ -20,11 +20,13 @@ function proc_SAMMU_waveform_gui() %<<<1
     digit_user_action = ensure_digit_algs();
 
     if any([qwtb_user_action digit_user_action])
-        msgbox(sprintf('Both QWTB and DigitalIT algorithms now seems to be working.\nIn the GUI window, you can press button `Calculate` and the example data will be processed.'));
+        welcome_message = 1;
+    else
+        welcome_message = 0;
     end
 
     % Run the GUI
-    make_gui();
+    make_gui(welcome_message);
 end % function
 
 %% functions for QWTB & DigitalIT installation %<<<1
@@ -210,7 +212,9 @@ function retval = isOctave() %<<<2
 end % function isOctave
 
 %% functions for GUI %<<<1
-function make_gui() %<<<2
+function make_gui(welcome_message) %<<<2
+% constructs gui. if welcome_message set to nonzero, welcome message about
+% successful installation is shown.
     %% define globals %<<<3
     global GUIname; % defined in proc_SAMMU_waveform_gui()
     global udata;    % structure with user input data
@@ -358,7 +362,12 @@ function make_gui() %<<<2
                         'units',     'characters', ...
                         'tooltipstring', sprintf('Start the calculations.\nFill all inputs before pushing this button.'), ...
                         'position',  uigrid_position(uig, 4));
-end
+
+    % show welcome message about successful install if required:
+    if welcome_message
+        msgbox(sprintf('Both QWTB and DigitalIT algorithms now seems to be working.\nIn the GUI window, you can press button `Calculate` and the example data will be processed.'));
+    end
+end % function make_gui
 
 function position = uigrid_position(uig, varargin) %<<<2
 % calculates proper values for position of ui elements.
