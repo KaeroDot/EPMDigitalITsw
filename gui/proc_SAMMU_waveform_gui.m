@@ -564,7 +564,7 @@ function y = load_datafile(filename) %<<<2
         error(errormsg);
     end
 
-    printf('Size of data is: % d waveform(s), %d samples in each waveform.\n', size(y, 1), size(y, 2))
+    disp(sprintf('Size of data is: % d waveform(s), %d samples in each waveform.', size(y, 1), size(y, 2)))
 end % function load_datafile
 
 function y = load_pcap_csv_file(filename) %<<<2
