@@ -19,11 +19,15 @@ Script is used to calculate signal properties using algorithms developed in the 
 ## Requirements
 You need either [GNU Octave](https://octave.org "GNU Octave") or [Matlab](https://www.mathworks.com/products/matlab.html "Matlab").
 
-(You also need [Q-Wave Toolbox](https://github.com/qwtb/qwtb "Q-Wave Toolbox").
+Optional and issues:
+
+You also need [Q-Wave Toolbox](https://github.com/qwtb/qwtb "Q-Wave Toolbox").
 and algorithms from the repository
 [EPMDigitalITsw](https://github.com/KaeroDot/EPMDigitalITsw "EPMDigitalITsw")
-added to the QWTB. However both things will be automatically downloaded
-during the first run so you do not have to do it by yourself.)
+added to the QWTB. However both things will be **automatically** downloaded
+during the first run so you do not have to do it by yourself.
+
+If you use MSYS2 platform (and similar) - you will need unzip for automatic installation of the QWTB and DigitalIT algorithms.
 
 ## How to run
 1. Download [this script proc_SAMMU_waveform_gui.m](https://github.com/KaeroDot/EPMDigitalITsw/blob/main/gui/proc_SAMMU_waveform_gui.m "Script proc_SAMMU_waveform_gui.m") using "Download raw file" on the right side of the linked webpage:
