@@ -65,6 +65,13 @@ else
   Result.Uwc = Result.Uw; % / SNR_Ucorrection;
   Result.Iw = sqrt(sum(Recordw(2,:) .* Recordw(2,:))/S2);
   Result.Iwc = Result.Iw; % / SNR_Icorrection;  
+  % Note by Rado Lapuh, 28.08.2024, email communication:
+  % The SNR correction (commented on previous lines) can be used to get rid of
+  % phase error due to the biased estimation of the apparent power. This
+  % actually works, but I was not able to find a solid SNR estimator, so I left
+  % it out. The comment can be removed and the SNR input as well. However, it
+  % might be worth to be noted that this can be used to get rid of the phase
+  % bias (and Apparent Power, depending of the definition) due to the noise.
   Result.Pw  = sum(RecordPw)/S2;
   Result.Sw = Result.Uw * Result.Iw; 
   Result.P = sum(RecordP)/N;
