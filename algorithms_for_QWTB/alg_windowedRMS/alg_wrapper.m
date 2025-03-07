@@ -38,18 +38,17 @@ else
 end
 
 % Call algorithm ---------------------------  %<<<1
-% [Result] = GetRMSPw(Record,window_name,SNR)
 Result = GetRMSPw(Record, datain.window.v);
 
 % Format output data:  --------------------------- %<<<1
 if use_y
-    dataout.A.v = Result.Uw;
+    dataout.A.v = Result.Ue;
 else
-    dataout.U.v = Result.Uw;
-    dataout.I.v = Result.Iw;
-    dataout.P.v = Result.Pw;
-    dataout.S.v = Result.Sw;
-    dataout.phi_ef.v = Result.phase;
+    dataout.U.v = Result.Ue;
+    dataout.I.v = Result.Ie;
+    dataout.P.v = Result.Pe;
+    dataout.S.v = Result.Se;
+    dataout.phi_ef.v = Result.pe;
     dataout.PF.v = cos(dataout.phi_ef.v);
 end
 

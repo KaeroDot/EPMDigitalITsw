@@ -1,6 +1,6 @@
-function [Result] = GetRMSPw(Record,window_name,SNR)
+function [Result] = GetRMSPw(Record,window_name)
 %% calculate Amplitudes and Power by Windowed discrete RMS sum
-%   [U I Pactive Papparent] = GetRMSw(RecordU,RecordI,window_name)
+%   [Result] = GetRMSw(Record,window_name)
 %
 %   output
 %     Result        structure with all results
@@ -38,9 +38,6 @@ function [Result] = GetRMSPw(Record,window_name,SNR)
 %                 'HFT223D'
 %                 'HFT248D'
 
-if (nargin == 2)
-    SNR = -20;
-end
 if (nargin == 1)
     window_name = 'blackman';
 end
@@ -52,43 +49,46 @@ w = win(N,window_name);   % returns selected window function
 S2 = sum(w.^2);
 
 Recordw = Record .* w;
+
+
+
 if M == 1
   % one signal
-  Result.Uw = sqrt(sum(Recordw .* Recordw)/S2);
+  Result.Ue = sqrt(sum(Recordw .* Recordw)/S2);
+
 else
   RecordU = Record(1,:);
   RecordI = Record(2,:);
   RecordP = RecordU .* RecordI;
   RecordPw = RecordP .* w.^2;
   % calculate all amplitude and power estimates
-  Result.Uw = sqrt(sum(Recordw(1,:) .* Recordw(1,:))/S2);
-  Result.Uwc = Result.Uw; % / SNR_Ucorrection;
-  Result.Iw = sqrt(sum(Recordw(2,:) .* Recordw(2,:))/S2);
-  Result.Iwc = Result.Iw; % / SNR_Icorrection;  
-  % Note by Rado Lapuh, 28.08.2024, email communication:
-  % The SNR correction (commented on previous lines) can be used to get rid of
-  % phase error due to the biased estimation of the apparent power. This
-  % actually works, but I was not able to find a solid SNR estimator, so I left
-  % it out. The comment can be removed and the SNR input as well. However, it
-  % might be worth to be noted that this can be used to get rid of the phase
-  % bias (and Apparent Power, depending of the definition) due to the noise.
-  Result.Pw  = sum(RecordPw)/S2;
-  Result.Sw = Result.Uw * Result.Iw; 
-  Result.P = sum(RecordP)/N;
-  Result.S = sqrt(sum(Record(1,:).^2) * sum(Record(2,:).^2))/N;
+  Result.Ue = sqrt(sum(Recordw(1,:) .* Recordw(1,:))/S2);
+
+  Result.Ie = sqrt(sum(Recordw(2,:) .* Recordw(2,:))/S2);
+
+  Pe  = sum(RecordPw)/S2;
+  Se = Result.Ue * Result.Ie;
+  %Result.P = sum(RecordP)/N;
+  %Result.S = sqrt(sum(Record(1,:).^2) * sum(Record(2,:).^2))/N;
   % calculate phase estimate
-  Pratio = Result.Pw / (Result.Sw);
+  Pratio = Pe / Se;
   if Pratio > 1
     Pratio = 1;
   end
   phase = abs(acos(Pratio));
   % determine phase sign 
-  r = xcorr(Record(1,:),Record(2,:),10);
+  % r = xcorr(Record(1,:),Record(2,:),10);
+  corrLength=length(Record(1,:))+length(Record(2,:))-1; % XXX instead of Record(1,:) you should use already populated variable RecordU etc.
+  xc=fftshift(ifft(fft(Record(1,:),corrLength).*conj(fft(Record(2,:),corrLength)))); % XXX instead of Record(1,:) you should use already populated variable RecordU etc.
+  r = xc((corrLength+1)/2-10:(corrLength+1)/2+10);
+
   sr = mean(gradient(r));
   dr = sr<0;
   if dr
     phase = -phase;
   end
-  Result.phase = phase;
+  Result.pe = phase;
+  Result.Pe = Pe;
+  Result.Se = Se;
 end
 
