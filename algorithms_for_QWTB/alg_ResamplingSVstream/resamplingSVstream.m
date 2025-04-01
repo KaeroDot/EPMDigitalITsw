@@ -1,9 +1,13 @@
+% -- [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f)
+% -- [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, SPP, errA1, fcuts, ripp, att, aafilter, verbose)
+%
 % Function resamples a signal to obtain coherent sampling. Interpolation,
 % decimation and anti-alias filtering is used to produce the output. Function is
-% based on the document and scripts developed by ITR company in the scope of
-% DigitalIT EPM Project.
-% If some outputs are ommited, the script is optimized for typical usecase of
-% substations and 50 Hz line frequency.
+% based on the document and scripts developed by Łukasiewicz Research Network –
+% Tele and Radio Research Institute in the scope of DigitalIT EPM Project.
+%
+% If some inputs are ommited, the script will select values optimized for typical
+% substations usecase and 50 Hz line frequency.
 %
 % Inputs:
 %  y: samples.
@@ -15,6 +19,7 @@
 %  ripp: (optional) passband ripple of the filter (ratio), default 1e-6.
 %  att: (optional) attenuation of the filter (dB), default 40.
 %  aafilter: (optional) if nonempty, coefficients in this variable will be used as a FIR filter instead of calculating a new filter.
+%  wholeperiods: (optional) if nonempty, returns only such number of samples to contain integer number of signal periods, default 1.
 %  verbose: (optional) prints out informations if nonzero, default 0.
 %
 % Outputs:
@@ -24,9 +29,11 @@
 %  fs_res: new sampling frequency of the resampled signal (Hz).
 %  aafilter: coefficients of the FIR filter used to prevent antialiasing.
 %  t_res: time axis of the resampled signal.
+%
+% Usage - following code runs demo:
+%  demo resamplingSVstream
 
-function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, SPP, errA1, fcuts, ripp, att, aafilter, verbose)
-    %XXX add option to return whole resampled signal, not only whole periods!
+function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, SPP, errA1, fcuts, ripp, att, aafilter, wholeperiods, verbose)
 
     %% Set default values %<<<1
     % nominal value based on substation case:
@@ -46,6 +53,9 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     if isempty(att) att = 40; end
     % custom antialiasing filter nominally not set:
     if ~exist('aafilter', 'var') aafilter = []; end
+    % nominally returns integer number of signal periods:
+    if ~exist('wholeperiods', 'var') wholeperiods = 1; end
+    if isempty(wholeperiods) wholeperiods = 1; end
     % nominally verbose is off:
     if ~exist('verbose', 'var') verbose = 0; end
     if isempty(verbose) verbose = 0; end
@@ -100,14 +110,16 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     % ydownsample = fastresample(testsignal, resfilter, Nint, Mdec);
     y_res = fastresample(y, aafilter, N, M);
 
-    % return only whole period multiple of the signal:
+    % return only whole period multiple of the signal if wholeperiods is set:
     % (this can return empty matrix if not enough samples left!)
-    wholeperiods = floor(numel(y_res)./SPP).*SPP;
-    if verbose printf('Number of whole periods left in the resampled data: %d\n', wholeperiods) end
-    if wholeperiods == 0
-        warning('resamplingSVstream: not enough samples left after resampling to return at least one period!')
+    if wholeperiods
+        newsamples = floor(numel(y_res)./SPP).*SPP;
+        if verbose printf('Number of whole periods left in the resampled data: %d\n', newsamples./SPP) end
+        if wholeperiods == 0
+            warning('resamplingSVstream: not enough samples left after resampling to return at least one period!')
+        end
+        y_res = y_res(1 : newsamples);
     end
-    y_res = y_res(1:wholeperiods);
 
     %% Calculate output properties if needed %<<<1
     % new sampling frequency:
@@ -127,7 +139,7 @@ end % function
 %! t = [0:L-1] ./ fs;
 %! A = 1; f = 49.25;
 %! y = A.*sin(2.*pi.*f.*t + 0);
-%! [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, [], [], [], [], [], [], 1);
+%! [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, [], [], [], [], [], [], [], 1);
 %! figure()
 %! plot(t, y, '-xb', t_res, y_res, '-+r') 
 %! xlabel('t (s)'); ylabel('samples (V)'); legend('original signal', 'resampled signal'); title(sprintf('resamplingSVstream demo 1\nwaveforms of non-coherently sampled signal and resampled signal'));
@@ -153,7 +165,7 @@ end % function
 %! for j = 1:numel(flist)
 %!     f = flist(j)
 %!     y = A.*sin(2.*pi.*f.*t + 0);
-%!     [y_res, N, M, fs_res, aafilter] = resamplingSVstream(y, fs, f, [], [], [], [], [], aafilter, 0);
+%!     [y_res, N, M, fs_res, aafilter] = resamplingSVstream(y, fs, f, [], [], [], [], [], aafilter);
 %!     Aerr(j)     = max(abs(fft(y))./(numel(y)./2));
 %!     Aerr_res(j) = max(abs(fft(y_res))./(numel(y_res)./2));
 %! end
