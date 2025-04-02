@@ -14,7 +14,7 @@
 %  fs: sampling frequency (Hz).
 %  f: frequency of the signal (Hz).
 %  SPP: (optional) target number of samples per period of the signal, default 256.
-%  errA1: (optional) maximum relative deviation of the signal amplitude (V/V), default 50e-6.
+%  errA1: (optional) maximum relative error of the signal amplitude (V/V), default 50e-6.
 %  fcuts: (optional) the frequency where the filter passband ends (Hz), default 55*110.
 %  ripp: (optional) passband ripple of the filter (ratio), default 1e-6.
 %  att: (optional) attenuation of the filter (dB), default 40.
@@ -62,7 +62,7 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     verbose = not(not(verbose));
 
     %% Calculate interpolation and decimation coefficients %<<<1
-    % Relative deviation of the number of samples per period from the nominal
+    % Relative error of the number of samples per period from the nominal
     % value deltaSPP. This is the maximum value of deltaSPP. deltaSPP should be
     % less than errA1/k. (See equation 1 in the pdf)
     k = 0.5; % based on pdf document
@@ -71,8 +71,8 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     % Minimum decimating coefficient.
     % Final M should be larger or equal to min_M.
     % (equation 6 in the pdf)
+    % (integer value not needed because final M will be calculated later)
     min_M = abs(1 ./ (2.*deltaSPP));
-    % add floor or round function! maybe M has to be >= N?! XXX
     if verbose printf('Minimal decimating coefficient `min_M` is: %d\n', min_M) end
 
     % Interpolation coefficient:
@@ -124,8 +124,8 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     %% Calculate output properties if needed %<<<1
     % new sampling frequency:
     fs_res = fs.*N./M;
-    if verbose printf('New sampling frequency is: %.5f\n', fs_res)
-    if nargout > 4
+    if verbose printf('New sampling frequency is: %.5f\n', fs_res) end
+    if nargout > 5
         % t_res is expected on the output:
         t_res = [0 : numel(y_res)-1]./fs_res;
     end
@@ -172,32 +172,36 @@ end % function
 %! plot(flist, Aerr, '-xb', flist, Aerr_res, '-+r')
 %! xlabel('signal frequency (Hz)'); ylabel('DFT amplitude (V)'); legend('simulated signal', 'resampled signal'); title(sprintf('resamplingSVstream demo 2\nDFT amplitude errors for various signal frequencies while keeping fixed sampling frequency'));
 
-                        % tests  %<<<1 NOT FINISHED!
-                        %!test
-                        %!shared y_res, N, M, y, fs, f, SPP, errA1, L, t
-                        %! fs = 12800;
-                        %! f = 49;
-                        %! SPP = 256;
-                        %! errA1 = 50e-6;
-                        %! L = 1000;
-                        %! t = [0:L-1] ./ fs;
-                        %! y = 1.*sin(2.*pi.*f.*t + 0);
-                        %! [y_res, N, M] = resamplingSVstream(y, fs, f, SPP, errA1, 1);
-
-                        % XXX Finish these parts:
-                        %!assert(size(y, 2) == L);
-                        %!assert(size(n, 2) == 10);
-                        %!assert(size(Upjvs, 2) == 10);
-                        %!assert(size(Upjvs1period, 2) == 10);
-                        %!assert(size(Spjvs, 2) == 10);
-                        %!assert(size(tsamples, 2) == L);
-                        %!assert(all(n == [1960 5131 6342 5131 1960 -1960 -5131 -6342 -5131 -1960]))
-                        %! A=2;
-                        %! [y, n, Upjvs, Upjvs1period, Spjvs, tsamples] = pjvs_wvfrm_generator2(fs, L, t, f, A, ph, fstep, phstep, fm, waveformtype);
-                        %!assert(n(1) == 2*1960)
-                        %! phstep = pi;
-                        %! [y, n, Upjvs, Upjvs1period, Spjvs, tsamples] = pjvs_wvfrm_generator2(fs, L, t, f, A, ph, fstep, phstep, fm, waveformtype);
-                        %!assert(size(n, 2) == 11);
-
+%!test %<<<1
+%!shared fs, L, t, A, f, y, y_res, N, M, fs_res, aafilter, t_res, tmp
+%! fs = 12800;
+%! L = 1280;
+%! t = [0:L-1] ./ fs;
+%! A = 1;
+%! f = 50;
+%! y = A.*sin(2.*pi.*f.*t + 0);
+%! [y_res] = resamplingSVstream(y, fs, f, [], [], [], [], [], [], [], 0);
+%! tmp = max(abs(fft(y_res))./(numel(y_res)./2));
+%!assert(tmp, A, 50e-6);
+%! [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, [], [], [], [], [], [], [], 0);
+%!assert(N, 5000, 0);
+%!assert(M, 5000, 0);
+%!assert(fs_res, fs, eps(fs));
+%!assert(not(isempty(aafilter)))
+%!assert(not(isempty(t_res)))
+%! f = 49;
+%! y = A.*sin(2.*pi.*f.*t + 0);
+%! [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, [], [], [], [], [], [], aafilter, 0);
+%! tmp = max(abs(fft(y_res))./(numel(y_res)./2));
+%!assert(tmp, A, 50e-6);
+%!assert(N, 4900, 0);
+%!assert(M, 5000, 0);
+%!assert(fs_res, 12544, eps(fs));
+%!assert(not(isempty(aafilter)))
+%!assert(not(isempty(t_res)))
+%! [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, 64, 0.03, [], [], [], [], aafilter, 0);
+%! tmp = max(abs(fft(y_res))./(numel(y_res)./2));
+%!assert(N, 20, 0);
+%!assert(M, 82, 0);
 
 % vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=matlab textwidth=80 tabstop=4 shiftwidth=4
