@@ -6,7 +6,7 @@ function proc_SAMMU_waveform_gui() %<<<1
 
     % Define constants
     GUIname = 'proc_SAMMU_waveform_gui';
-    udata.CONST_available_algorithms = {'SplineResample & FFT', 'resampleSVstream & FFT'}; % Must be a constant
+    udata.CONST_available_algorithms = {'SplineResample & FFT', 'resampleSVstream & FFT'}; % Must be a constant - if changed, change also function calculate()!
     udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
     udata.datafile = ''; % file with sampled data (default value see get_udata_from_pref)
     udata.split = ''; % data split period (default value see get_udata_from_pref)
@@ -753,8 +753,17 @@ function [main, ResampledSignalSpectrum] = calculate(DI, algid) %<<<2
 % Calculate result
         % XXX disable qwtb checks for all loops but first one
 
-    % do resampling:
-    ResampledSignal = qwtb('SplineResample', DI); % XXX somehow set other algorithms 
+    % First make proper estimate using the PSFE
+    FrequencyEstimate = qwtb('PSFE', DI);
+    DI.fest.v = FrequencyEstimate.f.v;
+
+    if strcmp(algid, 'SplineResample & FFT')
+        ResampledSignal = qwtb('SplineResample', DI);
+    elseif strcmp(algid, 'resampleSVstream & FFT')
+        ResampledSignal = qwtb('resamplingSVstream', DI);
+    elseif
+        error('proc_SAMMU_waveform_gui: mismatch in selected algorithm. Please ask author to fix this.')
+    end
 
     % get resampled spectrum using simple FFT (rectangle window):
     ResampledSignal.window.v = 'rect';
@@ -764,10 +773,12 @@ function [main, ResampledSignalSpectrum] = calculate(DI, algid) %<<<2
     % all available harmonics:
     idx = find(ResampledSignalSpectrum.A.v == max(ResampledSignalSpectrum.A.v));
     if isempty(idx)
+        main.f.v = NaN;
         main.A.v = NaN;
         main.ph.v = NaN;
     end
     idx = idx(1);
+    main.f.v = FrequencyEstimate.f.v;
     main.A.v = ResampledSignalSpectrum.A.v(idx);
     main.ph.v = ResampledSignalSpectrum.ph.v(idx);
 end % function calculate
@@ -777,12 +788,30 @@ function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
     [DIR, NAME, ~] = fileparts(udata.datafile);
     % save results
     save([fullfile(DIR, NAME) '-results.mat'], 'DOmain', 'DOspectrum', 'DI', 'y', 'udata');
-    
+
     % make figures
     % prepare legend:
     for j = 1:udata.waveforms
         leg{j} = sprintf('wavewform %d', j);
     end % for j
+
+    ffreq = figure;
+    % becuase of dumb matlab, one have to do it part by part:
+    tmp = [DOmain{:}];
+    tmp = [tmp.f];
+    tmp = [tmp.v];
+    tmp = reshape(tmp, udata.waveforms, []);
+    % prepare xaxis:
+    % (add half of the split time to plot values in the 'middle' of the split
+    % time region)
+    t = udata.split .* [0 : 1 : size(tmp, 2) - 1] + udata.split./2;
+    t = repmat(t, udata.waveforms, 1);
+    plot(t', tmp', '-x');
+    title(sprintf('Main signal frequency\n%s\n%s', udata.datafile, udata.alg), 'interpreter', 'none');
+    xlabel('time (s)');
+    ylabel('amplitude (V)');
+    legend(leg);
+
     famp = figure;
     % becuase of dumb matlab, one have to do it part by part:
     tmp = [DOmain{:}];
@@ -790,12 +819,12 @@ function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
     tmp = [tmp.v];
     tmp = reshape(tmp, udata.waveforms, []);
     % prepare xaxis:
-    % (add half of the plit time to plot values in the 'middle' of the split
+    % (add half of the split time to plot values in the 'middle' of the split
     % time region)
     t = udata.split .* [0 : 1 : size(tmp, 2) - 1] + udata.split./2;
     t = repmat(t, udata.waveforms, 1);
     plot(t', tmp', '-x');
-    title(sprintf('Main signal amplitude\n%s', udata.datafile), 'interpreter', 'none');
+    title(sprintf('Main signal amplitude\n%s\n%s', udata.datafile, udata.alg), 'interpreter', 'none');
     xlabel('time (s)');
     ylabel('amplitude (V)');
     legend(leg);
@@ -807,7 +836,7 @@ function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
     tmp = [tmp.v];
     tmp = reshape(tmp, udata.waveforms, []);
     plot(t', tmp', '-x');
-    title(sprintf('Main signal phase\n%s', udata.datafile), 'interpreter', 'none');
+    title(sprintf('Main signal phase\n%s\n%s', udata.datafile, udata.alg), 'interpreter', 'none');
     xlabel('time (s)');
     ylabel('phase (rad)');
     legend(leg);
