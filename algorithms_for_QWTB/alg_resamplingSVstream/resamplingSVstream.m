@@ -73,17 +73,17 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     % (equation 6 in the pdf)
     % (integer value not needed because final M will be calculated later)
     min_M = abs(1 ./ (2.*deltaSPP));
-    if verbose printf('Minimal decimating coefficient `min_M` is: %d\n', min_M) end
+    if verbose printf('resamplingSVstream: Minimal decimating coefficient `min_M` is: %d\n', min_M) end
 
     % Interpolation coefficient:
     % (equation 7 in the pdf, rounding has to be used to prevent errors)
     N = round(min_M .* SPP .* f ./ fs);
-    if verbose printf('Interpolation coefficient `N` is: %d\n', N) end
+    if verbose printf('resamplingSVstream: Interpolation coefficient `N` is: %d\n', N) end
 
     % Actual used decimation coefficient:
     % (equation 2 in the pdf)
     M = factorM(N, f, fs, SPP);
-    if verbose printf('Selected decimating coefficient `M` is: %d\n', M) end
+    if verbose printf('resamplingSVstream: Selected decimating coefficient `M` is: %d\n', M) end
 
 
     %% Design a FIR resample filter %<<<1
@@ -102,9 +102,9 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
         % user have not supplied his own filter, calculate filter coefficients:
         aafilter = dtfir1(fcuts, fs, N, M, fs, ripp, att);
     else
-        if verbose printf('User supplied antialiasing filter is used.\n') end
+        if verbose printf('resamplingSVstream: User supplied antialiasing filter is used.\n') end
     end
-    if verbose printf('Length of antialiasing filter is: %d\n', length(aafilter)) end
+    if verbose printf('resamplingSVstream: Length of antialiasing filter is: %d\n', length(aafilter)) end
 
     %% Performs resampling operation %<<<1
     % ydownsample = fastresample(testsignal, resfilter, Nint, Mdec);
@@ -114,7 +114,7 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     % (this can return empty matrix if not enough samples left!)
     if wholeperiods
         newsamples = floor(numel(y_res)./SPP).*SPP;
-        if verbose printf('Number of whole periods left in the resampled data: %d\n', newsamples./SPP) end
+        if verbose printf('resamplingSVstream: Number of whole periods left in the resampled data: %d\n', newsamples./SPP) end
         if wholeperiods == 0
             warning('resamplingSVstream: not enough samples left after resampling to return at least one period!')
         end
@@ -124,7 +124,7 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     %% Calculate output properties if needed %<<<1
     % new sampling frequency:
     fs_res = fs.*N./M;
-    if verbose printf('New sampling frequency is: %.5f\n', fs_res) end
+    if verbose printf('resamplingSVstream: New sampling frequency is: %.5f\n', fs_res) end
     if nargout > 5
         % t_res is expected on the output:
         t_res = [0 : numel(y_res)-1]./fs_res;
