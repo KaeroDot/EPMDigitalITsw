@@ -6,7 +6,7 @@ function proc_SAMMU_waveform_gui() %<<<1
 
     % Define constants
     GUIname = 'proc_SAMMU_waveform_gui';
-    udata.available_algorithms = {'SplineResample & FFT'}; % XXX remove? will be as an input?
+    udata.CONST_available_algorithms = {'SplineResample & FFT', 'resampleSVstream & FFT'}; % Must be a constant
     udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
     udata.datafile = ''; % file with sampled data (default value see get_udata_from_pref)
     udata.split = ''; % data split period (default value see get_udata_from_pref)
@@ -219,7 +219,6 @@ function make_gui(welcome_message) %<<<2
     global GUIname; % defined in proc_SAMMU_waveform_gui()
     global udata;    % structure with user input data
 
-
     %% Define grid for uicontrols and gui dimensions %<<<3
     % grid properties for the uicontrols:
     uig.row_step = 3; % grid size of rows of ui controls
@@ -285,12 +284,12 @@ function make_gui(welcome_message) %<<<2
 
     uig.col = uig.col + 1;
     % listbox with algorithms
-    tmp = find(strcmpi(udata.alg, udata.available_algorithms));
+    tmp = find(strcmpi(udata.alg, udata.CONST_available_algorithms));
     if isempty(tmp); tmp = 1; end
     p_alg = uicontrol(f_main, ...
                         'tag',      'p_alg', ...
                         'Style',    'popupmenu', ...
-                        'string',   udata.available_algorithms, ...
+                        'string',   udata.CONST_available_algorithms, ...
                         'value',    tmp, ...
                         'units',    'characters', ...
                         'tooltipstring', 'Select algorithm that will be used to calculate the results.', ...
@@ -410,23 +409,26 @@ function get_udata_from_pref() %<<<2
     global udata
 
     if ispref(GUIname, 'udata')
-        udata = getpref(GUIname, 'udata');
-    end
-    if not(isfield(udata, 'alg'))
-        udata.alg = '';
-    end
-    if not(isfield(udata, 'datafile'))
-        udata.datafile = '';
-    end
-    if not(isfield(udata, 'split'))
-        udata.split = '';
-    end
-    if not(isfield(udata, 'fs'))
-        udata.fs = '';
-    end
-    if not(isfield(udata, 'fest'))
-        udata.fest = '';
-    end
+        % load user preferences
+        udataprefs = getpref(GUIname, 'udata');
+        fnames = fieldnames(udata);
+        % go through all fieldnames that:
+        %   1, does not start with CONST prefix
+        %   2, are present in both udata and udataprefs
+        for j = 1:numel(fnames)
+            fname = fnames{j};
+            if not(strcmp(fname( 1:min(5, numel(fname)) ), 'CONST'))
+                if and(isfield('udata', fname), isfield('udataprefs', fname))
+                    % user preference exist, use it:
+                    udata.(fname) = udataprefs.(fname);
+                else
+                    % user prefence does not exist, set to empty string:
+                    udata.(fname) = '';
+                end
+            end
+        end % for
+    end % if ispref
+
     % default values if empty data:
     if isempty(udata.alg)
         udata.alg = 'SplineResample';
@@ -476,7 +478,7 @@ function b_calc_callback(~, ~) %<<<2
     % check inputs
     % udata.alg
     algvalue = get(find_h_by_tag('p_alg'), 'value');
-    udata.alg = udata.available_algorithms{algvalue};
+    udata.alg = udata.CONST_available_algorithms{algvalue};
     % udata.datafile
     datafile = get(find_h_by_tag('t_datafile'), 'string');
     if not(exist(datafile, 'file'))
@@ -815,4 +817,4 @@ function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
     saveas(fph, [fullfile(DIR, NAME) '-phase.fig']);
 end % function present_results
 
-% vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=octave textwidth=80 tabstop=4 shiftwidth=4
+% vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=matlab textwidth=80 tabstop=4 shiftwidth=4
