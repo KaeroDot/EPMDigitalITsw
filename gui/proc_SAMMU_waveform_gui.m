@@ -6,7 +6,7 @@ function proc_SAMMU_waveform_gui() %<<<1
 
     % Define constants
     GUIname = 'proc_SAMMU_waveform_gui';
-    udata.CONST_available_algorithms = {'SplineResample & FFT', 'resampleSVstream & FFT'}; % Must be a constant - if changed, change also function calculate()!
+    udata.CONST_available_algorithms = {'PSFE>SplineResample>FFT', 'PSFE>resampleSVstream>FFT'}; % Must be a constant - if changed, change also function calculate()!
     udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
     udata.datafile = ''; % file with sampled data (default value see get_udata_from_pref)
     udata.split = ''; % data split period (default value see get_udata_from_pref)
@@ -223,9 +223,9 @@ function make_gui(welcome_message) %<<<2
     % grid properties for the uicontrols:
     uig.row_step = 3; % grid size of rows of ui controls
     uig.row_off = 1; % offset of rows of ui controls
-    uig.col_step = 20; % grid size of columns of ui controls
+    uig.col_step = 28; % grid size of columns of ui controls
     uig.col_off = 1; % offset of columns of ui controls
-    uig.total_width = 81; % total width of the gui window
+    uig.total_width = 113; % total width of the gui window
     uig.total_height = 14; % total height of the gui window
     uig.row = 1; % index of row of ui controls
     uig.col = 1; % index of column of ui controls
@@ -337,7 +337,7 @@ function make_gui(welcome_message) %<<<2
     t_fest = uicontrol(f_main, ...
                         'tag',      't_fest', ...
                         'Style',    'text', ...
-                        'string',   sprintf('Signal frequency (Hz)\n (estimate)'), ...
+                        'string',   sprintf('Signal frequency (Hz)\n (basic estimate)'), ...
                         'units',    'characters', ...
                         'position',  uigrid_position(uig));
 
@@ -757,9 +757,9 @@ function [main, ResampledSignalSpectrum] = calculate(DI, algid) %<<<2
     FrequencyEstimate = qwtb('PSFE', DI);
     DI.fest.v = FrequencyEstimate.f.v;
 
-    if strcmp(algid, 'SplineResample & FFT')
+    if strcmp(algid, 'PSFE>SplineResample>FFT')
         ResampledSignal = qwtb('SplineResample', DI);
-    elseif strcmp(algid, 'resampleSVstream & FFT')
+    elseif strcmp(algid, 'PSFE>resampleSVstream>FFT')
         ResampledSignal = qwtb('resamplingSVstream', DI);
     elseif
         error('proc_SAMMU_waveform_gui: mismatch in selected algorithm. Please ask author to fix this.')
@@ -809,7 +809,7 @@ function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
     plot(t', tmp', '-x');
     title(sprintf('Main signal frequency\n%s\n%s', udata.datafile, udata.alg), 'interpreter', 'none');
     xlabel('time (s)');
-    ylabel('amplitude (V)');
+    ylabel('frequency (Hz)');
     legend(leg);
 
     famp = figure;
@@ -818,11 +818,6 @@ function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
     tmp = [tmp.A];
     tmp = [tmp.v];
     tmp = reshape(tmp, udata.waveforms, []);
-    % prepare xaxis:
-    % (add half of the split time to plot values in the 'middle' of the split
-    % time region)
-    t = udata.split .* [0 : 1 : size(tmp, 2) - 1] + udata.split./2;
-    t = repmat(t, udata.waveforms, 1);
     plot(t', tmp', '-x');
     title(sprintf('Main signal amplitude\n%s\n%s', udata.datafile, udata.alg), 'interpreter', 'none');
     xlabel('time (s)');
