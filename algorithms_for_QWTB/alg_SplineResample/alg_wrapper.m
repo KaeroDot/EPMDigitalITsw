@@ -89,7 +89,7 @@ end % if strcmpi(datain.method.v,
 tr = (0:N-1)*Tsr;
 
 spline = CubicSpline(datain.t.v, datain.y.v);
-dataout.y.v = spline.evaluate(tr);
+dataout.y.v = spline.evaluate(tr)(:)';
 
 % Format additional output data:  --------------------------- %<<<1
 dataout.t.v = tr;
