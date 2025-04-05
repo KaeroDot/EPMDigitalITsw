@@ -7,11 +7,16 @@ function proc_SAMMU_waveform_gui() %<<<1
     % Define constants
     GUIname = 'proc_SAMMU_waveform_gui';
     udata.CONST_available_algorithms = {'PSFE>SplineResample>FFT', 'PSFE>resampleSVstream>FFT'}; % Must be a constant - if changed, change also function calculate()!
+    udata.CONST_srmethod = {'keepN', 'minimizefs', 'poweroftwo'}; % if changed, change also function calculate()!
     udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
     udata.datafile = ''; % file with sampled data (default value see get_udata_from_pref)
     udata.split = ''; % data split period (default value see get_udata_from_pref)
     udata.fs = ''; % sampling frequency (default value see get_udata_from_pref)
     udata.fest = ''; % signal frequency estimate (default value see get_udata_from_pref)
+    udata.srmethod = ''; % SplineResample method (default value see get_udata_from_pref)
+    udata.srd = ''; % SplineResample denominator (default value see get_udata_from_pref)
+    udata.rsmaxaerr = ''; % resamplingSVstream maximum relative amplitude error (default value see get_udata_from_pref)
+    udata.rsspp = ''; % resamplingSVstream samples per period (default value see get_udata_from_pref)
 
     % Ensure system is working
     % ensure qwtb path
@@ -226,7 +231,7 @@ function make_gui(welcome_message) %<<<2
     uig.col_step = 28; % grid size of columns of ui controls
     uig.col_off = 1; % offset of columns of ui controls
     uig.total_width = 113; % total width of the gui window
-    uig.total_height = 14; % total height of the gui window
+    uig.total_height = 20; % total height of the gui window
     uig.row = 1; % index of row of ui controls
     uig.col = 1; % index of column of ui controls
 
@@ -252,7 +257,7 @@ function make_gui(welcome_message) %<<<2
     %% Create ui controls %<<<3
     % All controls must be children of f_main, otherwise automatic searching for
     % handles of uicontrols find_h_by_tag() will not work!
-    uig.row = 1;
+    uig.row = 1; % --------------- row 1 file input
     uig.col = 1;
     % button Filename
     b_datafile = uicontrol (f_main, ...
@@ -281,7 +286,6 @@ function make_gui(welcome_message) %<<<2
                         'string',   'Algorithm:', ...
                         'units',    'characters', ...
                         'position',  uigrid_position(uig));
-
     uig.col = uig.col + 1;
     % listbox with algorithms
     tmp = find(strcmpi(udata.alg, udata.CONST_available_algorithms));
@@ -294,7 +298,6 @@ function make_gui(welcome_message) %<<<2
                         'units',    'characters', ...
                         'tooltipstring', 'Select algorithm that will be used to calculate the results.', ...
                         'position',  uigrid_position(uig));
-
     uig.col = uig.col + 1;
     % label for input split per seconds
     t_split = uicontrol(f_main, ...
@@ -303,7 +306,6 @@ function make_gui(welcome_message) %<<<2
                         'string',   sprintf('Split by (s):\n(0 for no split)'), ...
                         'units',    'characters', ...
                         'position',  uigrid_position(uig));
-
     uig.col = uig.col + 1;
     % input split per seconds
     i_split = uicontrol(f_main, ...
@@ -313,7 +315,8 @@ function make_gui(welcome_message) %<<<2
                         'units',    'characters', ...
                         'tooltipstring', sprintf('Write here a time in seconds. The data will be split into sections of this length.\nResults will be calculated for every section independently.\nIf value is set to zero, no splitting will be done and whole data will be calculated as one record.'), ...
                         'position',  uigrid_position(uig));
-    uig.row = uig.row + 1;
+
+    uig.row = uig.row + 1; % --------------- row 2 sampling f and fest
     uig.col = 1;
     % label for input sampling frequency
     t_fs = uicontrol(f_main, ...
@@ -322,7 +325,6 @@ function make_gui(welcome_message) %<<<2
                         'string',   'Sampling f (Hz):', ...
                         'units',    'characters', ...
                         'position',  uigrid_position(uig));
-
     uig.col = uig.col + 1;
     % input sampling frequency
     i_fs = uicontrol(f_main, ...
@@ -340,7 +342,6 @@ function make_gui(welcome_message) %<<<2
                         'string',   sprintf('Signal frequency (Hz)\n (basic estimate)'), ...
                         'units',    'characters', ...
                         'position',  uigrid_position(uig));
-
     uig.col = uig.col + 1;
     % input signal estimate frequency
     i_fest = uicontrol(f_main, ...
@@ -351,7 +352,82 @@ function make_gui(welcome_message) %<<<2
                         'tooltipstring', sprintf('Write here a number with an estimate of the signal frequency, that is used in the calculation algorithms.\nE.g. for power measurement 50 Hz is sufficient estimate.'), ...
                         'position',  uigrid_position(uig));
 
-    uig.row = uig.row + 1;
+    uig.row = uig.row + 1; % --------------- row 3 splineresample relative
+    uig.col = 1;
+    % label for input splineresample method
+    t_srmethod = uicontrol(f_main, ...
+                        'tag',      't_srmethod', ...
+                        'Style',    'text', ...
+                        'string',   sprintf('Method:\n(only for SplineResample alg)'), ...
+                        'units',    'characters', ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % input splinreesample method
+    tmp = find(strcmpi(udata.srmethod, udata.CONST_srmethod));
+    if isempty(tmp); tmp = 1; end
+    p_srmethod = uicontrol(f_main, ...
+                        'tag',      'p_srmethod', ...
+                        'Style',    'popupmenu', ...
+                        'string',   udata.CONST_srmethod, ...
+                        'value',    tmp, ...
+                        'units',    'characters', ...
+                        'tooltipstring', sprintf('Select a method used in SplineResample algorithm.\nThis is relevant only for SplineResample algorithm. For other algorithms, this value is ignored.'), ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % label for input splineresample denominator
+    t_srd = uicontrol(f_main, ...
+                        'tag',      't_srd', ...
+                        'Style',    'text', ...
+                        'string',   sprintf('Denominator:\n(only for SplineResample alg'), ...
+                        'units',    'characters', ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % input spinreesample denominator
+    i_srd = uicontrol(f_main, ...
+                        'tag',      'i_srd', ...
+                        'Style',    'edit', ...
+                        'string',   num2str(udata.srd), ...
+                        'units',    'characters', ...
+                        'tooltipstring', sprintf('Write here a value of denominator to reduce resampled bandwidth.\nThis is relevant only for SplineResample algorithm. For other algorithms, this value is ignored.'), ...
+                        'position',  uigrid_position(uig));
+
+    uig.row = uig.row + 1; % --------------- row 4 resamplingSVstream relative
+    uig.col = 1;
+    t_rsmaxaerr = uicontrol(f_main, ...
+                        'tag',      't_rsmaxaerr', ...
+                        'Style',    'text', ...
+                        'string',   sprintf('Maximum relative amplitude error:\n(only for resamplingSVstream alg)'), ...
+                        'units',    'characters', ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % input resamplingSVstream method
+    i_rsmaxaerr = uicontrol(f_main, ...
+                        'tag',      'i_rsmaxaerr', ...
+                        'Style',    'edit', ...
+                        'string',   num2str(udata.rsmaxaerr), ...
+                        'units',    'characters', ...
+                        'tooltipstring', sprintf('Write here a maximum relative amplitude error (V/V).\nThis is relevant only for resamplingSVstream algorithm. For other algorithms, this value is ignored.'), ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % label for input resamplingSVstream samples per period
+    t_rsspp = uicontrol(f_main, ...
+                        'tag',      't_rsspp', ...
+                        'Style',    'text', ...
+                        'string',   sprintf('Samples per period of the signal:\n(only for resamplingSVstream alg)'), ...
+                        'units',    'characters', ...
+                        'tooltipstring', sprintf('Required number of samples per period of the signal.\nThis is relevant only for resamplingSVstream algorithm. For other algorithms, this value is ignored.'), ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % input resamplingSVstream samples per period
+    i_rsspp = uicontrol(f_main, ...
+                        'tag',      'i_rsspp', ...
+                        'Style',    'edit', ...
+                        'string',   num2str(udata.rsspp), ...
+                        'units',    'characters', ...
+                        'tooltipstring', sprintf('Write here a value of the required number of samples per period of the signal.\nThis is relevant only for resamplingSVstream algorithm. For other algorithms, this value is ignored.'), ...
+                        'position',  uigrid_position(uig));
+
+    uig.row = uig.row + 1; % --------------- row 5 calc+help
     uig.col = 1;
     % button Calculate
     b_calc = uicontrol (f_main, ...
@@ -418,7 +494,7 @@ function get_udata_from_pref() %<<<2
         for j = 1:numel(fnames)
             fname = fnames{j};
             if not(strcmp(fname( 1:min(5, numel(fname)) ), 'CONST'))
-                if and(isfield('udata', fname), isfield('udataprefs', fname))
+                if and(isfield(udata, fname), isfield(udataprefs, fname))
                     % user preference exist, use it:
                     udata.(fname) = udataprefs.(fname);
                 else
@@ -431,7 +507,7 @@ function get_udata_from_pref() %<<<2
 
     % default values if empty data:
     if isempty(udata.alg)
-        udata.alg = 'SplineResample';
+        udata.alg = udata.CONST_available_algorithms{1};
     end
     if isempty(udata.datafile)
         udata.datafile = 'testdata_simple_csv_fs=4000_f=49.9-50.csv';
@@ -444,6 +520,18 @@ function get_udata_from_pref() %<<<2
     end
     if not(isnumeric(udata.fest))
         udata.fest = 50;
+    end
+    if not(isnumeric(udata.srd))
+        udata.srd = 1;
+    end
+    if isempty(udata.srmethod)
+        udata.srmethod = udata.CONST_srmethod{1};
+    end
+    if not(isnumeric(udata.rsmaxaerr))
+        udata.rsmaxaerr = 50e-6;
+    end
+    if not(isnumeric(udata.rsspp))
+        udata.rsspp = 256;
     end
 end % function
 
@@ -515,6 +603,54 @@ function b_calc_callback(~, ~) %<<<2
         return
     end
     udata.fest = fest;
+    % udata.srmethod
+    srmethodvalue = get(find_h_by_tag('p_srmethod'), 'value');
+    udata.srmethod = udata.CONST_srmethod{srmethodvalue};
+    % udata.srd
+    srd = str2num(get(find_h_by_tag('i_srd'), 'string'));
+    tmperr = 0;
+    if (isempty(srd) || srd <= 0)
+        tmperr = 1;
+    end
+    if srd > 0
+        if fix(srd) ~= srd
+            tmperr = 1;
+        end
+    end
+    if tmperr
+        msgbox('The input `Denominator` must contain a positive real integer!', ...
+               'Input error', ...
+               'modal');
+        return
+    end
+    udata.srd = srd;
+    % udata.rsmaxaerr
+    rsmaxaerr = str2num(get(find_h_by_tag('i_rsmaxaerr'), 'string'));
+    if (isempty(rsmaxaerr) || rsmaxaerr < 0)
+        msgbox('The input `Maximum relative amplitude error` must contain a non-negative real number!', ...
+               'Input error', ...
+               'modal');
+        return
+    end
+    udata.rsmaxaerr = rsmaxaerr;
+    % udata.rsspp
+    rsspp = str2num(get(find_h_by_tag('i_rsspp'), 'string'));
+    tmperr = 0;
+    if (isempty(rsspp) || rsspp <= 0)
+        tmperr = 1;
+    end
+    if rsspp > 0
+        if fix(rsspp) ~= rsspp
+            tmperr = 1;
+        end
+    end
+    if tmperr
+        msgbox('The input `Samples per period of the signal` must contain a positive integer number!', ...
+               'Input error', ...
+               'modal');
+        return
+    end
+    udata.rsspp = rsspp;
 
     %% All ok, save gui setup & run calculation
     set_udata_to_pref();
@@ -628,24 +764,24 @@ function proc_SAMMU_waveform(udata) %<<<2
     global user_cancel; % flag that user canceled calculations
     user_cancel = 0;
 
-                % %% Check inputs  %<<<3
-                % XXX maybe elsewhere. Inputs from GUI are already checked
-                % errmsg = '';
-                % if not(ischar(datafile))
-                %     error('proc_SAMMU_waveform: The first input argument must be a string with valid file path to the measured data!');
-                % end
-                % if not(exist(datafile))
-                %     error('proc_SAMMU_waveform: The data file not found!');
-                % end
-                %
-                % % check algorithm? this can delay everything XXX
-                %
-                % if not(isnumeric(split))
-                %     error('proc_SAMMU_waveform: Split must be a number!')
-                % end
-                % if split < 0
-                %     error('proc_SAMMU_waveform: Split must be a non-negative number!')
-                % end
+            % %% Check inputs  %<<<3
+            % XXX maybe elsewhere. Inputs from GUI are already checked
+            % errmsg = '';
+            % if not(ischar(datafile))
+            %     error('proc_SAMMU_waveform: The first input argument must be a string with valid file path to the measured data!');
+            % end
+            % if not(exist(datafile))
+            %     error('proc_SAMMU_waveform: The data file not found!');
+            % end
+            %
+            % % check algorithm? this can delay everything XXX
+            %
+            % if not(isnumeric(split))
+            %     error('proc_SAMMU_waveform: Split must be a number!')
+            % end
+            % if split < 0
+            %     error('proc_SAMMU_waveform: Split must be a non-negative number!')
+            % end
 
     %% load datafile %<<<3
     % (datafile records must be in rows - one row is one record, more rows means
@@ -666,7 +802,12 @@ function proc_SAMMU_waveform(udata) %<<<2
     udata.waveforms = waveforms;
     % set other properties:
     DI.fs.v = udata.fs;
+    DI.Ts.v = 1./udata.fs;
     DI.fest.v = udata.fest;
+    DI.method.v = udata.srmethod;
+    DI.D.v = udata.srd;
+    DI.max_rel_A_err.v = udata.rsmaxaerr;
+    DI.SPP.v = udata.rsspp;
 
     %% Process the data %<<<3
     samples_in_period = DI.fs.v./DI.fest.v;
@@ -720,7 +861,7 @@ function proc_SAMMU_waveform(udata) %<<<2
                 en = samples;
             end
             % cut the data:
-            DI.y.v = y(k, st : en);
+            DI.y.v = y(k, st : en)(:)';
             DIcell{k, j} = DI; % store inputs for reference
             % calculate
             [DOmain{k, j}, DOspectrum{k, j}] = calculate(DI, udata.alg);
@@ -837,7 +978,8 @@ function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
     legend(leg);
 
     % save figures
-    saveas(fph, [fullfile(DIR, NAME) '-amplitude.fig']);
+    saveas(ffreq, [fullfile(DIR, NAME) '-frequency.fig']);
+    saveas(famp, [fullfile(DIR, NAME) '-amplitude.fig']);
     saveas(fph, [fullfile(DIR, NAME) '-phase.fig']);
 end % function present_results
 
