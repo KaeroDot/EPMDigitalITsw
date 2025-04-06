@@ -35,7 +35,7 @@
 
 function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, SPP, errA1, fcuts, ripp, att, aafilter, wholeperiods, verbose)
 
-    %% Set default values %<<<1
+    %% Check user inputs and set default values %<<<1
     % nominal value based on substation case:
     if ~exist('SPP', 'var') SPP = 256; end
     if isempty(SPP) SPP = 256; end
@@ -44,7 +44,17 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     if isempty(errA1) errA1 = 50e-6; end
     % nominal value based on substation case:
     if ~exist('fcuts', 'var') fcuts = 55*110; end
-    if isempty(fcuts) fcuts = 55*110; end
+    % if user have not defined bandwidth of the AA filter, it has to be selected
+    % here. Maximum value 55*110 is based on typical substation usecase. However
+    % it must be smaller than half of the sampling frequency:
+    if isempty(fcuts)
+        fcuts = min([55*110 0.49.*fs]);
+        if verbose printf('resamplingSVstream: Filter passband end `fcuts` was set to %g Hz\n', fcuts) end
+    else
+        if fcuts > 0.5.*fs
+            error('resamplingSVstream: Filter passband end `fcuts` must be smaller than half of the sampling frequency!')
+        end
+    end % if isempty(fcuts)
     % nominal value based on the pdf, page 4:
     if ~exist('ripp', 'var') ripp = 1e-6; end
     if isempty(ripp) ripp = 1e-6; end
