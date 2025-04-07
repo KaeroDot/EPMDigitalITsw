@@ -470,6 +470,7 @@ function make_gui(welcome_message) %<<<2
 
     %% show/hide ui elements depending on selected algorithm %<<<3
     algvalue = find(strcmpi(udata.alg, udata.CONST_available_algorithms));
+    if isempty(algvalue); algvalue = 1; end
     vis = {'off' 'on'};
     for j = 1:numel(udata.show_for_alg)
         for k = 1:numel(udata.show_for_alg{j})
@@ -533,6 +534,10 @@ function get_udata_from_pref() %<<<2
     if isempty(udata.alg)
         udata.alg = udata.CONST_available_algorithms{1};
     end
+    if isempty(find(strcmpi(udata.alg, udata.CONST_available_algorithms)))
+        % in case of bad data in preferences
+        udata.alg = udata.CONST_available_algorithms{1};
+    end
     if isempty(udata.datafile)
         udata.datafile = 'testdata_simple_csv_fs=4000_f=49.9-50.csv';
     end
@@ -549,6 +554,10 @@ function get_udata_from_pref() %<<<2
         udata.srd = 1;
     end
     if isempty(udata.srmethod)
+        udata.srmethod = udata.CONST_srmethod{1};
+    end
+    if isempty(find(strcmpi(udata.srmethod, udata.CONST_srmethod)))
+        % in case of bad data in preferences
         udata.srmethod = udata.CONST_srmethod{1};
     end
     if not(isnumeric(udata.rsmaxaerr))
