@@ -1,4 +1,5 @@
 # Help for script proc_SAMMU_waveform_gui.m
+
 Script is used to calculate signal properties using algorithms developed in the scope of [EPM Digital-IT](https://www.euramet.org/research-innovation/search-research-projects/details/project/metrology-for-digital-substation-instrumentation "EPM Digital-IT").
 
 ## Table of contents
@@ -17,6 +18,7 @@ Script is used to calculate signal properties using algorithms developed in the 
 <!-- vim-markdown-toc -->
 
 ## Requirements
+
 You need either [GNU Octave](https://octave.org "GNU Octave") or [Matlab](https://www.mathworks.com/products/matlab.html "Matlab").
 
 Optional and issues:
@@ -30,6 +32,7 @@ during the first run so you do not have to do it by yourself.
 If you use MSYS2 platform (and similar) - you will need unzip for automatic installation of the QWTB and DigitalIT algorithms.
 
 ## How to run
+
 1. Download [this script proc_SAMMU_waveform_gui.m](https://github.com/KaeroDot/EPMDigitalITsw/blob/main/gui/proc_SAMMU_waveform_gui.m "Script proc_SAMMU_waveform_gui.m") using "Download raw file" on the right side of the linked webpage:
 
     ![](proc_SAMMU_waveform_gui_help_image_02.png)
@@ -38,6 +41,7 @@ If you use MSYS2 platform (and similar) - you will need unzip for automatic inst
 1. Run GNU Octave and Matlab, and start the downloaded script by typing command `proc_SAMMU_waveform_gui`.
 
 ## How to use
+
 Main window:
 
 ![Main GUI window](proc_SAMMU_waveform_gui_help_image_01.png)
@@ -55,10 +59,15 @@ Main window:
 - Input field "Signal frequency (Hz)" is used to input an estimate of the
   signal frequency, that is used in the calculation algorithms. E.g. for power
   measurement 50 Hz is sufficient estimate.
+- Inputs and selections "Method", "Denominator", "Maximum relative amplitude
+  error" and "Samples per period of the signal" are relevant to the selected
+  algorithm. For details please take a look at the documentation of the
+  algorithms.
 - Button "Calculate" runs the calculation.
 - Button "Help" shows this help.
 
 ## Data file formats
+
 The script can process data files with the following content:
 
 1. csv (comma separated file) with a vectors of numbers representing a record,
@@ -66,6 +75,7 @@ The script can process data files with the following content:
 1. mat file with single variable y.
 
 ### csv with a vectors of numbers
+
 The datafile must be named with `.csv` file extension. The content must look like this:
 
     waveform1-sample1, waveform2-sample1, ..., waveformM-sample1
@@ -74,8 +84,9 @@ The datafile must be named with `.csv` file extension. The content must look lik
     waveform1-sampleN, waveform2-sampleN, ..., waveformM-sampleN
 
 ### csv as output from Wireshark
+
 The datafile must be named with `.csv` file extension. The content is output
-from [Wireshark](https://www.wireshark.org "Wireshark") export function 
+from [Wireshark](https://www.wireshark.org "Wireshark") export function
  See section [How to export data from Wireshark to csv](#how-to-export-data-from-wireshark-to-csv). The content of the file should
  look like this:
 
@@ -93,18 +104,21 @@ Rows with all zero or empty values are ignored.
 Data with multiple signal sources are not yet supported.
 
 ### mat file
+
 The datafile must be named with `.mat` file extension. It should contain only
 one variable `y`, that is a matrix of size `NxM` with `M` waveforms each of `N`
 samples. That means column records.
 
 ## How to export data from Wireshark to csv
+
 [Wireshark](https://www.wireshark.org "Wireshark") is used to capture data
 streams from SAMMU. Wireshark data has to be expoted to csv in this way:
+
 1. In Wireshark, right-click on any packet and force the decoding of seqData as
 PhsMeas using `Protocol Preferences->IEC61850 Sampled Values->Force decoding of seqData as PhsMeas`:
 
     ![](proc_SAMMU_waveform_gui_help_image_03.png)
-    
+
     (For details see [IEC 61850 9-2 Sampled Values, Wireshark, and the "Cloudy" effect](https://www.linkedin.com/pulse/iec-61850-9-2-sampled-values-wireshark-cloudy-effect-silveira/) )
 1. Export data as csv file using menu `File->Export Packet Dissections->As CSV`:
 
@@ -113,7 +127,9 @@ PhsMeas using `Protocol Preferences->IEC61850 Sampled Values->Force decoding of 
 1. You should obtain file with content as shown in section [Data file formats - csv as output from Wireshark](#csv-as-output-from-wireshark).
 
 ## Results format
+
 Results of the calculation are saved into the directory containing the datafile.
+
 - All shown figures are saved as files with `.fig` extension. You can open this file in Matlab or GNU Octave.
 - Calculated results are saved in file with `.mat` extension. You can open this
   file in Matlab or GNU Octave. The file contains variables:
@@ -126,4 +142,3 @@ Cell of structures `DOmain`, `DOspectrum` and `DI` represents input and output
 quantities for one section (as determined by "Split by (s)") and one waveform,
 where e.g. `DOmain{j, k}` is result for waveform `j` and section `k`. Cell
 contains structure with quantities according QWTB format.
-

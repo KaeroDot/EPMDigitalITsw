@@ -1024,8 +1024,11 @@ function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
 
     % save figures
     saveas(ffreq, [fullfile(DIR, NAME) '-frequency.fig']);
+    saveas(ffreq, [fullfile(DIR, NAME) '-frequency.png']);
     saveas(famp, [fullfile(DIR, NAME) '-amplitude.fig']);
+    saveas(famp, [fullfile(DIR, NAME) '-amplitude.png']);
     saveas(fph, [fullfile(DIR, NAME) '-phase.fig']);
+    saveas(fph, [fullfile(DIR, NAME) '-phase.png']);
 end % function present_results
 
 % vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=matlab textwidth=80 tabstop=4 shiftwidth=4
