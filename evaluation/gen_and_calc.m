@@ -1,101 +1,161 @@
 % Function generates signal and estimate quantities using following 
 % algorithms:
-%  - SP-WFFT
-%  - SplineResample (with FFT afterwards)
-%  - FPNLSF
-%  - and one other selected.
+%  - FE: frequency estimation algorithm defined in DI.EstimationAlgorithm
+%  - SR: Spline resampling + FFT rectangular window
+%  - WF: WFFT HFT116D,
+%  - MH: MHFE,
+%  - WR: WRMS
+%  - SV: resamplingSVstream
 %
 %  Inputs: all quantities needed for GenNHarm
-%  Outputs: fErrEst          - signal frequencies from EstimationAlgorithm
-%           AErrEst          - signal amplitudes from EstimationAlgorithm
-%           phErrEst         - signal phases from EstimationAlgorithm
-%           fErrResFFT       - signal frequencies from Resampling & FFT
-%           AErrResFFT       - signal amplitudes from Resampling & FFT
-%           phErrResFFT      - signal phases from Resampling & FFT
-%           fErrFit          - signal frequencies from sine fitting
-%           AErrFit          - signal amplitudes from sine fitting
-%           phErrFit         - signal phases from sine fitting
-%           fErrFFTWin       - signal frequencies from windowed FFT
-%           AErrFFTWin       - signal amplitudes from windowed FFT
-%           phErrFFTWin       - signal phases from windowed FFT
-function [DO, DI, CS] = gen_and_calc(DI, CS)
-    %% Waveform generation ---------------------------------------- %<<<1
+%  Outputs:
+%           FE_fErr    - signal frequency estimated by algorithm defined in DI.EstimationAlgorithm
+%           FE_AErr    - signal frequency estimated by algorithm defined in DI.EstimationAlgorithm
+%           FE_phErr   - signal frequency estimated by algorithm defined in DI.EstimationAlgorithm
+%           SR_fErr    - signal frequency estimated by Spline Resample + FFT
+%           SR_AErr    - signal amplitude estimated by Spline Resample + FFT
+%           SR_phErr   - signal phase estimated by Spline Resample + FFT
+%           SR_fErr    - signal frequency estimated by Spline Resample + FFT
+%           SR_AErr    - signal amplitude estimated by Spline Resample + FFT
+%           SR_phErr   - signal phase estimated by Spline Resample + FFT
+%           WF_fErr    - signal frequency estimated by Windowed FFT
+%           WF_AErr    - signal amplitude estimated by Windowed FFT
+%           WF_phErr   - signal phase estimated by Windowed FFT
+%           MH_fErr    - signal frequency estimated by MultiHarmonic Frequency Estimator
+%           MH_AErr    - signal amplitude estimated by MultiHarmonic Frequency Estimator
+%           MH_phErr   - signal phase estimated by MultiHarmonic Frequency Estimator
+%           WR_fErr  - signal frequency estimated by Windowed RMS
+%           WR_AErr  - signal amplitude estimated by Windowed RMS
+%           WR_phErr - signal phase estimated by Windowed RMS
+%           SV_fErr    - signal frequency estimated by Upscale+Downscale+FFT
+%           SV_AErr    - signal amplitude estimated by Upscale+Downscale+FFT
+%           SV_phErr   - signal phase estimated by Upscale+Downscale+FFT
+%
+function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
+    %% Waveform generation ---------------------------------------- %<<<2
     % Signal = qwtb('WaveformGenerator', DI, CS);
     Signal = qwtb('GenNHarm', DI, CS);
 
-    %% Estimation of parameters ---------------------------------------- %<<<1
-    %% Path 1 ---------------------------------------- %<<<2
-    % Resample and FFT analysis
-    % Frequency estimation:
-    SignalEstimate = qwtb(DI.EstimationAlgorithm.v, Signal, CS);
-    % set output frequency as signal estimate:
-    Signal.fest.v = SignalEstimate.f.v;
-    % Resample waveform:
-    Signal.method.v = DI.ResamplingMethod.v;
-    ResampledSignal = qwtb('SplineResample', Signal, CS);
-    % Get amplitude using simple FFT (rectangle window):
-    ResampledSignal.window.v = 'rect';
-    ResampledSignalSpectrum = qwtb('SP-WFFT', ResampledSignal, CS);
-    % Find peaks nearest to the signal frequencies and record amplitudes
-    % evaluated by rectangular FFT:
-    for j = 1:numel(DI.f.v)
-        [~, idx] = min(abs(ResampledSignalSpectrum.f.v - DI.f.v(j)));
-        DO.fErrResFFT.v(j) = ResampledSignalSpectrum.f.v(idx) - DI.f.v(j);
-        DO.AErrResFFT.v(j) = ResampledSignalSpectrum.A.v(idx) - DI.A.v(j);
-        DO.phErrResFFT.v(j) = ResampledSignalSpectrum.ph.v(idx) - DI.ph.v(j);
-    end
+    %% FE - Estimation Algorithm ---------------------------------------- %<<<2
+    FE = qwtb(DI.EstimationAlgorithm.v, Signal, CS);
     % Push estimate results to the output:
-    DO.fErrEst.v = SignalEstimate.f.v - DI.f.v(1);
-    DO.AErrEst.v = SignalEstimate.A.v - DI.A.v(1);
-    DO.phErrEst.v = SignalEstimate.ph.v - DI.ph.v(1);
-    % fill in values for other harmonic components by NaN, because estimate
-    % gives value only for main harmonic component:
-    DO.fErrEst.v = [DO.fErrEst.v repmat(NaN, 1, numel(DI.f.v) - 1)];
-    DO.AErrEst.v = [DO.AErrEst.v repmat(NaN, 1, numel(DI.f.v) - 1)];
-    DO.phErrEst.v = [DO.phErrEst.v repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.FE_f.v       = FE.f.v;
+    DO.FE_fErr.v    = FE.f.v - DI.f.v(1);
+    DO.FE_A.v       = FE.A.v;
+    DO.FE_AErr.v    = FE.A.v - DI.A.v(1);
+    DO.FE_ph.v      = FE.ph.v;
+    DO.FE_phErr.v   = FE.ph.v - DI.ph.v(1);
+    % Fill in values for other harmonic components by NaN, because estimate
+    % gives value only for main harmonic component and this would spoil easy
+    % plotting.
+    DO.FE_f.v       = [DO.FE_f.v        repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.FE_fErr.v    = [DO.FE_fErr.v     repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.FE_A.v       = [DO.FE_A.v        repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.FE_AErr.v    = [DO.FE_AErr.v     repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.FE_ph.v      = [DO.FE_ph.v       repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.FE_phErr.v   = [DO.FE_phErr.v    repmat(NaN, 1, numel(DI.f.v) - 1)];
 
-    %% Path 2 ---------------------------------------- %<<<2
-    % Sine fitting
-    Signal.fest.v = DI.fEstimateForFit.v;
-    SignalFit = qwtb(DI.SineFitAlgorithm.v, Signal, CS);
-    DO.fErrFit.v = SignalFit.f.v - DI.f.v(1);
-    DO.AErrFit.v = SignalFit.A.v - DI.A.v(1);
-    DO.phErrFit.v = SignalFit.ph.v - DI.ph.v(1);
-    % fill in values for other harmonic components by NaN, because fitting gives
-    % value only for main harmonic component:
-    DO.fErrFit.v = [DO.fErrFit.v repmat(NaN, 1, numel(DI.f.v) - 1)];
-    DO.AErrFit.v = [DO.AErrFit.v repmat(NaN, 1, numel(DI.f.v) - 1)];
-    DO.phErrFit.v = [DO.phErrFit.v repmat(NaN, 1, numel(DI.f.v) - 1)];
+    % SR - Spline Resample and FFT ---------------------------------------- %<<<2
+    % Set estimated output frequency as signal estimate for Spline Resampling
+    % method:
+    Signal.fest.v = FE.f.v;
+    % Resample waveform:
+    Signal.method.v = DI.SR_Method.v;
+    SR = qwtb('SplineResample', Signal, CS);
+    % Get spectrum using simple FFT (rectangle window):
+    SR.window.v = 'rect';
+    SR_Spectrum = qwtb('SP-WFFT', SR, CS);
+    % Find peaks nearest to the signal frequencies and get amplitudes
+    % evaluated by rectangular FFT, push to the output:
+    for j = 1:numel(DI.f.v)
+        [~, idx] = min(abs(SR_Spectrum.f.v - DI.f.v(j)));
+        DO.SR_f.v(j)        = SR_Spectrum.f.v(idx);
+        DO.SR_fErr.v(j)     = SR_Spectrum.f.v(idx) - DI.f.v(j);
+        DO.SR_A.v(j)        = SR_Spectrum.A.v(idx);
+        DO.SR_AErr.v(j)     = SR_Spectrum.A.v(idx) - DI.A.v(j);
+        DO.SR_ph.v(j)       = SR_Spectrum.ph.v(idx);
+        DO.SR_phErr.v(j)    = SR_Spectrum.ph.v(idx) - DI.ph.v(j);
+    end
 
-    % Path 2 additional ---------------------------------------- %<<<2
-    % Windowed FFT, only for comparison:
+    % WF - WFFT HFT116D ---------------------------------------- %<<<2
+    % Windowed FFT
     Signal.window.v = DI.SignalWindow.v;
-    SignalSpectrumWindow = qwtb('SP-WFFT', Signal, CS);
+    WF_Spectrum = qwtb('SP-WFFT', Signal, CS);
     % find peaks nearest to the signal frequencies and record amplitudes
     % evaluated by WFFT:
     for j = 1:numel(DI.f.v)
-        [~, idx] = min(abs(SignalSpectrumWindow.f.v - DI.f.v(j)));
-        DO.fErrFFTWin.v(j) = SignalSpectrumWindow.f.v(idx) - DI.f.v(j);
-        DO.AErrFFTWin.v(j) = SignalSpectrumWindow.A.v(idx) - DI.A.v(j);
-        DO.phErrFFTWin.v(j) = SignalSpectrumWindow.ph.v(idx) - DI.ph.v(j);
+        [~, idx] = min(abs(WF_Spectrum.f.v - DI.f.v(j)));
+        DO.WF_f.v(j)        = WF_Spectrum.f.v(idx);
+        DO.WF_fErr.v(j)     = WF_Spectrum.f.v(idx) - DI.f.v(j);
+        DO.WF_A.v(j)        = WF_Spectrum.A.v(idx);
+        DO.WF_AErr.v(j)     = WF_Spectrum.A.v(idx) - DI.A.v(j);
+        DO.WF_ph.v(j)       = WF_Spectrum.ph.v(idx);
+        DO.WF_phErr.v(j)    = WF_Spectrum.ph.v(idx) - DI.ph.v(j);
     end
 
-    %% Plotting spectra for debug ---------------------------------------- %<<<1
+    % MH - MHFE %<<<2
+    % XXXXXXXXXXXXXXXXXXXXXXXX just simulate output for now
+    DO.MH_fErr.v = [NaN];
+    DO.MH_AErr.v = [NaN];
+    DO.MH_phErr.v = [NaN];
+
+    % WR - WRMS %<<<2
+    Signal.window.v = 'HFT116D'; % due to incompatibility with alg_SP-WFFT
+    WR = qwtb('windowedRMS', Signal, CS);
+    % RMS value to the output, but in peak value:
+    DO.WR_f.v       = NaN;
+    DO.WR_fErr.v    = NaN;
+    DO.WR_A.v       = WR.A.v.*2.^0.5;
+    DO.WR_AErr.v    = WR.A.v.*2.^0.5 - DI.A.v(1);
+    DO.WR_ph.v      = NaN;
+    DO.WR_phErr.v   = NaN;
+    % Fill in values for other harmonic components by NaN, because estimate
+    % gives value only for main harmonic component and this would spoil easy
+    % plotting.
+    DO.WR_f.v       = [DO.WR_f.v        repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.WR_fErr.v    = [DO.WR_fErr.v     repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.WR_A.v       = [DO.WR_A.v        repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.WR_AErr.v    = [DO.WR_AErr.v     repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.WR_ph.v      = [DO.WR_ph.v       repmat(NaN, 1, numel(DI.f.v) - 1)];
+    DO.WR_phErr.v   = [DO.WR_phErr.v    repmat(NaN, 1, numel(DI.f.v) - 1)];
+
+    % SV - resamplingSVstream and FFT ---------------------------------------- %<<<2
+    % Set estimated output frequency and samples per periods for resamplingSVstream:
+    Signal.fest.v = FE.f.v;
+    Signal.SPP.v = DI.SV_SPP.v;
+    % Resample waveform:
+    SV = qwtb('resamplingSVstream', Signal, CS);
+    if numel(SV.y.v) == 0
+        error('gen_and_calc: resamplingSVstream resulted in empty signal!')
+    end
+    % Get spectrum using simple FFT (rectangle window):
+    SV.window.v = 'rect';
+    SV_Spectrum = qwtb('SP-WFFT', SV, CS);
+    % Find peaks nearest to the signal frequencies and get amplitudes
+    % evaluated by rectangular FFT, push to the output:
+    for j = 1:numel(DI.f.v)
+        [~, idx] = min(abs(SV_Spectrum.f.v - DI.f.v(j)));
+        DO.SV_fErr.v(j) = SV_Spectrum.f.v(idx) - DI.f.v(j);
+        DO.SV_AErr.v(j) = SV_Spectrum.A.v(idx) - DI.A.v(j);
+        DO.SV_phErr.v(j) = SV_Spectrum.ph.v(idx) - DI.ph.v(j);
+    end
+
+    % Plotting spectra for debug ---------------------------------------- %<<<2
     % % show all spectra together:
-    % Signal.window.v = 'rect';
-    % SignalSpectrum = qwtb('SP-WFFT', Signal, CS);
     % figure
     % hold on
-    % semilogy(SignalSpectrum.f.v, SignalSpectrum.A.v, '-xb',...
-    %          SignalSpectrumWindow.f.v, SignalSpectrumWindow.A.v, '-xk',...
-    %          ResampledSignalSpectrum.f.v, ResampledSignalSpectrum.A.v, '-xr',...
-    %          SignalFit.f.v, SignalFit.A.v, 'og')
-    % legend(  'signal spectrum rect. window',...
-    %          'signal spectrum with window',...
-    %          'resampled signal spectrum rect. window',...
-    %          'signal fitted')
+    % semilogy(FE.f.v, FE.A.v, 'or', 'linewidth', 5, ...
+    %          SR_Spectrum.f.v, SR_Spectrum.A.v, '-xr', ...
+    %          WF_Spectrum.f.v, WF_Spectrum.A.v, '-xb', ...
+    %          SV_Spectrum.f.v, SV_Spectrum.A.v, '-xg', ...
+    %          FE.f.v, WR.A.v, 'ob', 'linewidth', 5);
+    % legend(  'FE, frequency estimate',...
+    %          'SR, spline resample',...
+    %          'WF, spectrum flattop window',...
+    %          'SV, resampling SV stream',...
+    %          'WR, windowed RMS')
     % hold off
     % keyboard
 end
 
-% vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=octave textwidth=80 tabstop=4 shiftwidth=4
+% vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=matlab textwidth=80 tabstop=4 shiftwidth=4
