@@ -7,20 +7,19 @@
 
 function resampling_test() %<<<1
 addpath('~/metrologie/Q-Wave/qwtb/qwtb')
-%% General settings ---------------------------------------- %<<<1
+%% General settings ---------------------------------------- %<<<2
 % file_prefix = 'f_no_harm_2_per_-_'; % file prefix for plots and data
-file_prefix = 'test_'; % file prefix for plots and data
-multiple_harmonics = 1 % will correctly process data and plots inside of this script
+file_prefix = 'test'; % file prefix for plots and data
 alg_prefixes = {'FE', 'SR', 'WF', 'MH', 'WR', 'SV'}; % algorithm prefixes
 quantity_prefixes = {'f', 'A', 'ph'}; % quantity prefixes
 
-%% Calculation settings
+%% Calculation settings %<<<2
 CS.verbose = 0;
 CS.var.dir = '/dev/shm/qwtbvar_temp';
 CS.var.fnprefix = file_prefix;
 CS.var.cleanfiles = 1;
 
-%% Settings of signal ---------------------------------------- %<<<1
+%% Settings of signal ---------------------------------------- %<<<2
 % properties of the signal
 % no harmonic:
 SigParam.f.v = [50];      % nominal signal frequency (Hz)
@@ -28,8 +27,8 @@ SigParam.A.v = [1];       % nominal amplitude (V)
 SigParam.ph.v = [0];      % nominal signal phase (rad)
 SigParam.O.v = [0];      % nominal signal offset (V)
 % harmonics 2-5:
-harm_multiple = 3;
-if multiple_harmonics
+harm_multiple = 3; % set to 1 if only main component
+if harm_multiple > 1
     SigParam.f.v = [50 harm_multiple.*50];      % nominal signal frequency (Hz)
     SigParam.A.v = [1 0.1];       % nominal amplitude (V)
     SigParam.ph.v = [0 0];      % nominal signal phase (rad)
@@ -38,7 +37,8 @@ end
 SigParam.fs.v = 96e3;   % nominal sampling frequency (Hz)
 SigParam.M.v = 5;      % length of the record in multiple of periods
 % SigParam.L.v = 20./SigParam.f.v.*SigParam.fs.v;   % that is 20 periods at 50 Hz
-SigParam.THD.v = 1e-3;  % nominal harmonic distortion
+SigParam.THD.v = 1e-3;  % nominal harmonic distortion 
+% XXX When THD is used? XXX
 SigParam.nharm.v = 1;   % nominal number of harmonics
 SigParam.noise.v = 0;% nominal signal noise (V)
 % Additional parameters:
@@ -51,7 +51,7 @@ SigParam.SignalWindow.v = 'flattop_116D'; % that is hft116D. 'flattop_248D' is b
 SigParam.fEstimateForFit.v = 50;  % Estimate for fitting algorithm
 SigParam.SV_SPP.v = 256;  %Required number of samples per period of the signal
 
-%% Varied parameter ---------------------------------------- %<<<1
+%% Varied parameter ---------------------------------------- %<<<2
 %---
 % % number of periods:
 % % round is needed to prevent rounding errors in WaveformGenerator algorithm!
@@ -62,8 +62,8 @@ SigParam.SV_SPP.v = 256;  %Required number of samples per period of the signal
 %---
 % signal frequency
 % SigParamVar.f.v = [49.9 : 0.0001 : 50.1];
-SigParamVar.f.v = [49.9 : 0.1 : 50.1];
-if multiple_harmonics
+SigParamVar.f.v = [49.9 : 0.001 : 50.1];
+if harm_multiple > 1
     SigParamVar.f.v = [SigParamVar.f.v; harm_multiple.*SigParamVar.f.v]';
 end
 % set same value for number of samples instead the number of periods:
@@ -85,14 +85,14 @@ xaxislabel = 'Signal frequency (Hz)';
 % xaxisquantity = 'noise.v';
 % xaxislabel = 'Noise (σ)';
 
-%% Calculation ---------------------------------------- %<<<1
+%% Calculation ---------------------------------------- %<<<2
 jobfn = qwtbvar('calc', 'gen_and_calc', SigParam, SigParamVar, CS);
 
-%% Parse results ---------------------------------------- %<<<1
+%% Parse results ---------------------------------------- %<<<2
 % get results
 [ndres ndresc ndaxes] = qwtbvar('result', jobfn);
 % reshape needed because of multiple harmonics:
-if multiple_harmonics
+if harm_multiple > 1
     for ap = alg_prefixes
         for q = quantity_prefixes
             % example of eval:
@@ -123,100 +123,13 @@ for ap = alg_prefixes
     eval(tmp);
 end
 
-%% Plotting ---------------------------------------- %<<<1
+%% Plotting ---------------------------------------- %<<<2
 make_plot('A', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes, quantity_prefixes);
 make_plot('ph', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes, quantity_prefixes);
-if multiple_harmonics
+if harm_multiple > 1
     make_plot('A', res, ndaxes, 2, file_prefix, xaxislabel, alg_prefixes, quantity_prefixes);
     make_plot('ph', res, ndaxes, 2, file_prefix, xaxislabel, alg_prefixes, quantity_prefixes);
 end
-
-
-% % Amplitudes ---------------------------------------- %<<<2
-% % main harmonic
-% figure
-% hold on
-% % with (:,1) is needed for xaxis signal frequency in the case of multiple harmonics
-% plot(ndaxes.values{1}(:,1), AErrFFTWin(1, :), '-k',...
-%      ndaxes.values{1}(:,1), AErrFit(1, :), '-xg',...
-%      ndaxes.values{1}(:,1), AErrEst(1, :), '-+b',...
-%      ndaxes.values{1}(:,1), AErrResFFT(1, :), '-r');
-% xlabel(xaxislabel)
-% ylabel('Error from nominal value (V)')
-% legend('A: FFT, window',...
-%        'A: sine fit',...
-%        'A: PSFE estimate',...
-%        'A: resampling & FFT rect. window');
-% title(sprintf('Main signal component, amplitude errors.\nEstimate of signal fr. based on PSFE.'))
-% hold off
-%
-% saveas(gcf(), [file_prefix 'A_component_1.png'])
-% saveas(gcf(), [file_prefix 'A_component_1.fig'])
-%
-% % second harmonic
-% if multiple_harmonics
-%     figure
-%     hold on
-%      % with (:,1) is needed for xaxis signal frequency in the case of multiple harmonics
-%     plot(ndaxes.values{1}(:, 1), AErrFFTWin(2, :), '-k',...
-%          ndaxes.values{1}(:, 1), AErrFit(2, :), '-xg',...
-%          ndaxes.values{1}(:, 1), AErrEst(2, :), '-+b',...
-%          ndaxes.values{1}(:, 1), AErrResFFT(2, :), '-r');
-%     xlabel(xaxislabel)
-%     ylabel('Error from nominal value (V)')
-%     legend('A: FFT, window',...
-%            'A: sine fit',...
-%            'A: PSFE estimate',...
-%            'A: resampling & FFT rect. window');
-%     title(sprintf('Second signal component, amplitude errors.\nEstimate of signal fr. based on PSFE.'))
-%     hold off
-%
-%     saveas(gcf(), [file_prefix 'A_component_2.png'])
-%     saveas(gcf(), [file_prefix 'A_component_2.fig'])
-% end
-%
-% % Phases ---------------------------------------- %<<<2
-% % main harmonic
-% figure
-% hold on
-%  % with (:,1) is needed for xaxis signal frequency in the case of multiple harmonics
-% plot(ndaxes.values{1}(:, 1), phErrFFTWin(1, :), '-k',...
-%      ndaxes.values{1}(:, 1), phErrFit(1, :), '-xg',...
-%      ndaxes.values{1}(:, 1), phErrEst(1, :), '-+b',...
-%      ndaxes.values{1}(:, 1), phErrResFFT(1, :), '-r');
-% xlabel(xaxislabel)
-% ylabel('Error from nominal value (rad), wrapped to -pi..pi')
-% legend('ph: FFT, window',...
-%        'ph: sine fit',...
-%        'ph: PSFE estimate',...
-%        'ph: resampling & FFT rect. window');
-% title(sprintf('Main signal component, phase errors.\nEstimate of signal fr. based on PSFE.'))
-% hold off
-%
-% saveas(gcf(), [file_prefix 'ph_component_1.png'])
-% saveas(gcf(), [file_prefix 'ph_component_1.fig'])
-%
-% % second harmonic
-% if multiple_harmonics
-%     figure
-%     hold on
-%      % with (:,1) is needed for xaxis signal frequency in the case of multiple harmonics
-%     plot(ndaxes.values{1}(:, 1), phErrFFTWin(2, :), '-k',...
-%          ndaxes.values{1}(:, 1), phErrFit(2, :), '-xg',...
-%          ndaxes.values{1}(:, 1), phErrEst(2, :), '-+b',...
-%          ndaxes.values{1}(:, 1), phErrResFFT(2, :), '-r');
-%     xlabel(xaxislabel)
-%     ylabel('Error from nominal value (rad), wrapped to -pi..pi')
-%     legend('ph: FFT, window',...
-%            'ph: sine fit',...
-%            'ph: PSFE estimate',...
-%            'ph: resampling & FFT rect. window');
-%     title(sprintf('Second signal component, phase errors.\nEstimate of signal fr. based on PSFE.'))
-%     hold off
-%
-%     saveas(gcf(), [file_prefix 'ph_component_2.png'])
-%     saveas(gcf(), [file_prefix 'ph_component_2.fig'])
-% end
 
 save('-7', [file_prefix 'input_and_plot_data.mat'])
 
@@ -243,8 +156,9 @@ function make_plot(quantity, res, ndaxes, data_index, file_prefix, xaxislabel, a
     title(tmp);
     legend(alg_prefixes);
     hold off
-    saveas(gcf(), [file_prefix 'A_component_1.png'])
-    saveas(gcf(), [file_prefix 'A_component_1.fig'])
+    fn = sprintf('%s_%s_hm_%d.', file_prefix, quantity, data_index);
+    saveas(gcf(), [fn '.png'])
+    saveas(gcf(), [fn '.fig'])
 end % function
 
 % vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=matlab textwidth=80 tabstop=4 shiftwidth=4
