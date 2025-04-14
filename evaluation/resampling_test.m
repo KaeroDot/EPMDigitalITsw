@@ -97,8 +97,9 @@ if multiple_harmonics
         for q = quantity_prefixes
             % example of eval:
             % res.FE_fErr = reshape([ndres.FE_fErr.v{:}], numel(SigParam.f.v), []);
-            eval(sprintf('res.%s_%sErr.v = reshape([ndres.%s_%sErr.v{:}], numel(SigParam.%s.v), []);', ...
-                            ap{1}, q{1}, ap{1}, q{1}, q{1}));
+            tmp = sprintf('res.%s_%sErr.v = reshape([ndres.%s_%sErr.v{:}], numel(SigParam.f.v), []);', ...
+                            ap{1}, q{1}, ap{1}, q{1});
+            eval(tmp);
         end
     end
 else % only single harmonic:
@@ -106,8 +107,9 @@ else % only single harmonic:
         for q = quantity_prefixes
             % example of eval:
             % res.FE_fErr     = ndres.FE_fErr.v;
-            eval(sprintf('res.%s_%sErr.v = ndres.%s_%sErr.v;', ...
-                            ap{1}, q{1}, ap{1}, q{1}));
+            tmp = sprintf('res.%s_%sErr.v = ndres.%s_%sErr.v;', ...
+                            ap{1}, q{1}, ap{1}, q{1})
+            eval(tmp);
         end
     end
 end
@@ -116,8 +118,9 @@ end
 for ap = alg_prefixes
     % example of eval:
     % res.FE_phErr = wrapToPi(res.FE_phErr);
-    eval(sprintf('res.%s_phErr.v = wrapToPi(res.%s_phErr.v);', ...
-                    ap{1}, ap{1}));
+    tmp = sprintf('res.%s_phErr.v = wrapToPi(res.%s_phErr.v);', ...
+                    ap{1}, ap{1});
+    eval(tmp);
 end
 
 %% Plotting ---------------------------------------- %<<<1
@@ -226,12 +229,18 @@ function make_plot(quantity, res, ndaxes, data_index, file_prefix, xaxislabel, a
     for alg = alg_prefixes
         % eval example:
         % val = ndaxes.values{1}(:,1), FE_AErr(1, :);
-        eval(sprintf('val = res.%s_%sErr.v(data_index, :);', alg{1}, quantity));
+        tmp = sprintf('val = res.%s_%sErr.v(data_index, :);', alg{1}, quantity);
+        eval(tmp);
         plot(ndaxes.values{1}(:,1), val, '-x')
     end
-    xlabel = (xaxislabel);
-    ylabel = ('Error from nominal value (Hz/V/rad)');
-    tmp = 'Error from nominal value\nHarmonic component';
+    xlabel(xaxislabel);
+    ylabel([quantity ' error from nominal value (Hz/V/rad)']);
+    if data_index > 1
+        tmp = sprintf('Error from nominal value\nn-th harmonic component');
+    else
+        tmp = sprintf('Error from nominal value\nmain component');
+    end
+    title(tmp);
     legend(alg_prefixes);
     hold off
     saveas(gcf(), [file_prefix 'A_component_1.png'])

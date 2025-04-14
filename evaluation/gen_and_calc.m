@@ -95,9 +95,9 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
 
     % MH - MHFE %<<<2
     % XXXXXXXXXXXXXXXXXXXXXXXX just simulate output for now
-    DO.MH_fErr.v = [NaN];
-    DO.MH_AErr.v = [NaN];
-    DO.MH_phErr.v = [NaN];
+    DO.MH_fErr.v  = NaN.*zeros(size(DO.SR_fErr.v));
+    DO.MH_AErr.v  = NaN.*zeros(size(DO.SR_AErr.v));
+    DO.MH_phErr.v = NaN.*zeros(size(DO.SR_phErr.v));
 
     % WR - WRMS %<<<2
     Signal.window.v = 'HFT116D'; % due to incompatibility with alg_SP-WFFT
