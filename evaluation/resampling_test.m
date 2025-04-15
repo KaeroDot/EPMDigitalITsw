@@ -9,9 +9,9 @@ function resampling_test() %<<<1
 addpath('~/metrologie/Q-Wave/qwtb/qwtb')
 %% General settings ---------------------------------------- %<<<2
 % file_prefix = 'f_no_harm_2_per_-_'; % file prefix for plots and data
-file_prefix = 'test'; % file prefix for plots and data
+file_prefix = 'quick_test'; % file prefix for plots and data
 alg_prefixes = {'FE', 'SR', 'WF', 'MH', 'WR', 'SV'}; % algorithm prefixes
-quantity_prefixes = {'f', 'A', 'ph'}; % quantity prefixes
+quantity_prefixes = {'fErr', 'AErr', 'phErr'}; % quantity prefixes
 
 %% Calculation settings %<<<2
 CS.verbose = 0;
@@ -27,7 +27,7 @@ SigParam.A.v = [1];       % nominal amplitude (V)
 SigParam.ph.v = [0];      % nominal signal phase (rad)
 SigParam.O.v = [0];      % nominal signal offset (V)
 % harmonics 2-5:
-harm_multiple = 3; % set to 1 if only main component
+harm_multiple = 3; % set to 1 if want only main component
 if harm_multiple > 1
     SigParam.f.v = [50 harm_multiple.*50];      % nominal signal frequency (Hz)
     SigParam.A.v = [1 0.1];       % nominal amplitude (V)
@@ -38,14 +38,14 @@ SigParam.fs.v = 96e3;   % nominal sampling frequency (Hz)
 SigParam.M.v = 5;      % length of the record in multiple of periods
 % SigParam.L.v = 20./SigParam.f.v.*SigParam.fs.v;   % that is 20 periods at 50 Hz
 SigParam.THD.v = 1e-3;  % nominal harmonic distortion 
-% XXX When THD is used? XXX
+% TODO When THD is used?
 SigParam.nharm.v = 1;   % nominal number of harmonics
 SigParam.noise.v = 0;% nominal signal noise (V)
 % Additional parameters:
 SigParam.EstimationAlgorithm.v = 'PSFE';  % Estimation algorithm used for resampling
 SigParam.SR_Method.v = 'keepn';  %Resampling method of the SplineResample algorithm (possible values: 'keepN','minimizefs','poweroftwo')
 SigParam.SignalWindow.v = 'flattop_116D'; % that is hft116D. 'flattop_248D' is better;  % window used in SP-WFFT algorithm.
-% XXX! SigParam.SignalWindow.v = 'HFT116D'; % that 'should' be the same for
+% TODO! SigParam.SignalWindow.v = 'HFT116D'; % that 'should' be the same for
 % WRMS, but it is hardcoded in gen_and_calc due to incompatibility and errors in
 % WRMS window function.
 SigParam.fEstimateForFit.v = 50;  % Estimate for fitting algorithm
@@ -61,8 +61,8 @@ SigParam.SV_SPP.v = 256;  %Required number of samples per period of the signal
 
 %---
 % signal frequency
-% SigParamVar.f.v = [49.9 : 0.0001 : 50.1];
 SigParamVar.f.v = [49.9 : 0.001 : 50.1];
+SigParamVar.f.v = [49.9 : 0.1 : 50.1]; % TODO
 if harm_multiple > 1
     SigParamVar.f.v = [SigParamVar.f.v; harm_multiple.*SigParamVar.f.v]';
 end
@@ -96,8 +96,8 @@ if harm_multiple > 1
     for ap = alg_prefixes
         for q = quantity_prefixes
             % example of eval:
-            % res.FE_fErr = reshape([ndres.FE_fErr.v{:}], numel(SigParam.f.v), []);
-            tmp = sprintf('res.%s_%sErr.v = reshape([ndres.%s_%sErr.v{:}], numel(SigParam.f.v), []);', ...
+            % res.FE_fErr.v = reshape([ndres.FE_fErr.v{:}], numel(SigParam.f.v), []);
+            tmp = sprintf('res.%s_%s.v = reshape([ndres.%s_%s.v{:}], numel(SigParam.f.v), []);', ...
                             ap{1}, q{1}, ap{1}, q{1});
             eval(tmp);
         end
@@ -106,12 +106,19 @@ else % only single harmonic:
     for ap = alg_prefixes
         for q = quantity_prefixes
             % example of eval:
-            % res.FE_fErr     = ndres.FE_fErr.v;
-            tmp = sprintf('res.%s_%sErr.v = ndres.%s_%sErr.v;', ...
+            % res.FE_fErr.v = ndres.FE_fErr.v;
+            tmp = sprintf('res.%s_%s.v = ndres.%s_%s.v;', ...
                             ap{1}, q{1}, ap{1}, q{1})
             eval(tmp);
         end
     end
+end
+for ap = alg_prefixes
+    % example of eval:
+    % res.FE_ct.v = ndres.FE_ct.v;
+    tmp = sprintf('res.%s_ct.v = ndres.%s_ct.v;', ...
+                    ap{1}, ap{1});
+    eval(tmp);
 end
 
 % wrap phase results to -pi..pi:
@@ -124,11 +131,12 @@ for ap = alg_prefixes
 end
 
 %% Plotting ---------------------------------------- %<<<2
-make_plot('A', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes, quantity_prefixes);
-make_plot('ph', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes, quantity_prefixes);
+make_plot('AErr', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes);
+make_plot('phErr', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes);
+make_plot('ct', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes);
 if harm_multiple > 1
-    make_plot('A', res, ndaxes, 2, file_prefix, xaxislabel, alg_prefixes, quantity_prefixes);
-    make_plot('ph', res, ndaxes, 2, file_prefix, xaxislabel, alg_prefixes, quantity_prefixes);
+    make_plot('AErr', res, ndaxes, 2, file_prefix, xaxislabel, alg_prefixes);
+    make_plot('phErr', res, ndaxes, 2, file_prefix, xaxislabel, alg_prefixes);
 end
 
 save('-7', [file_prefix 'input_and_plot_data.mat'])
@@ -136,18 +144,18 @@ save('-7', [file_prefix 'input_and_plot_data.mat'])
 end % function resampling_test
 
 %% function make_plot %<<<1
-function make_plot(quantity, res, ndaxes, data_index, file_prefix, xaxislabel, alg_prefixes, quantity_prefixes)
+function make_plot(quantity, res, ndaxes, data_index, file_prefix, xaxislabel, alg_prefixes)
     figure
     hold on
     for alg = alg_prefixes
         % eval example:
         % val = ndaxes.values{1}(:,1), FE_AErr(1, :);
-        tmp = sprintf('val = res.%s_%sErr.v(data_index, :);', alg{1}, quantity);
+        tmp = sprintf('val = res.%s_%s.v(data_index, :);', alg{1}, quantity);
         eval(tmp);
         plot(ndaxes.values{1}(:,1), val, '-x')
     end
     xlabel(xaxislabel);
-    ylabel([quantity ' error from nominal value (Hz/V/rad)']);
+    ylabel([quantity ': error from nominal value (Hz/V/rad)']);
     if data_index > 1
         tmp = sprintf('Error from nominal value\nn-th harmonic component');
     else

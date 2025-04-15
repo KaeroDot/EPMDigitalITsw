@@ -9,27 +9,33 @@
 %
 %  Inputs: all quantities needed for GenNHarm
 %  Outputs:
-%           FE_fErr    - signal frequency estimated by algorithm defined in DI.EstimationAlgorithm
-%           FE_AErr    - signal frequency estimated by algorithm defined in DI.EstimationAlgorithm
-%           FE_phErr   - signal frequency estimated by algorithm defined in DI.EstimationAlgorithm
-%           SR_fErr    - signal frequency estimated by Spline Resample + FFT
-%           SR_AErr    - signal amplitude estimated by Spline Resample + FFT
-%           SR_phErr   - signal phase estimated by Spline Resample + FFT
-%           SR_fErr    - signal frequency estimated by Spline Resample + FFT
-%           SR_AErr    - signal amplitude estimated by Spline Resample + FFT
-%           SR_phErr   - signal phase estimated by Spline Resample + FFT
-%           WF_fErr    - signal frequency estimated by Windowed FFT
-%           WF_AErr    - signal amplitude estimated by Windowed FFT
-%           WF_phErr   - signal phase estimated by Windowed FFT
-%           MH_fErr    - signal frequency estimated by MultiHarmonic Frequency Estimator
-%           MH_AErr    - signal amplitude estimated by MultiHarmonic Frequency Estimator
-%           MH_phErr   - signal phase estimated by MultiHarmonic Frequency Estimator
-%           WR_fErr  - signal frequency estimated by Windowed RMS
-%           WR_AErr  - signal amplitude estimated by Windowed RMS
-%           WR_phErr - signal phase estimated by Windowed RMS
-%           SV_fErr    - signal frequency estimated by Upscale+Downscale+FFT
-%           SV_AErr    - signal amplitude estimated by Upscale+Downscale+FFT
-%           SV_phErr   - signal phase estimated by Upscale+Downscale+FFT
+%           FE_fErr     - signal frequency estimated by algorithm defined in DI.EstimationAlgorithm
+%           FE_AErr     - signal frequency
+%           FE_phErr    - signal frequency
+%           FE_ct       - calculation time
+%           SR_fErr     - signal frequency estimated by Spline Resample + FFT
+%           SR_AErr     - signal amplitude
+%           SR_phErr    - signal phase
+%           SR_fErr     - signal frequency estimated by Spline Resample + FFT
+%           SR_AErr     - signal amplitude
+%           SR_phErr    - signal phase
+%           SR_ct       - calculation time
+%           WF_fErr     - signal frequency estimated by Windowed FFT
+%           WF_AErr     - signal amplitude
+%           WF_phErr    - signal phase
+%           WF_ct       - calculation time
+%           MH_fErr     - signal frequency estimated by MultiHarmonic Frequency Estimator
+%           MH_AErr     - signal amplitude
+%           MH_phErr    - signal phase
+%           MH_ct       - calculation time
+%           WR_fErr     - signal frequency estimated by Windowed RMS
+%           WR_AErr     - signal amplitude
+%           WR_phErr    - signal phase
+%           WR_ct       - calculation time
+%           SV_fErr     - signal frequency estimated by Upscale+Downscale+FFT
+%           SV_AErr     - signal amplitude
+%           SV_phErr    - signal phase
+%           SV_ct
 %
 function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     %% Waveform generation ---------------------------------------- %<<<2
@@ -37,7 +43,9 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     Signal = qwtb('GenNHarm', DI, CS);
 
     %% FE - Estimation Algorithm ---------------------------------------- %<<<2
+    tic;
     FE = qwtb(DI.EstimationAlgorithm.v, Signal, CS);
+    DO.FE_ct.v = toc;
     % Push estimate results to the output:
     DO.FE_f.v       = FE.f.v;
     DO.FE_fErr.v    = FE.f.v - DI.f.v(1);
@@ -61,7 +69,9 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     Signal.fest.v = FE.f.v;
     % Resample waveform:
     Signal.method.v = DI.SR_Method.v;
+    tic;
     SR = qwtb('SplineResample', Signal, CS);
+    DO.SR_ct.v = toc;
     % Get spectrum using simple FFT (rectangle window):
     SR.window.v = 'rect';
     SR_Spectrum = qwtb('SP-WFFT', SR, CS);
@@ -80,7 +90,9 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     % WF - WFFT HFT116D ---------------------------------------- %<<<2
     % Windowed FFT
     Signal.window.v = DI.SignalWindow.v;
+    tic;
     WF_Spectrum = qwtb('SP-WFFT', Signal, CS);
+    DO.WF_ct.v = toc;
     % find peaks nearest to the signal frequencies and record amplitudes
     % evaluated by WFFT:
     for j = 1:numel(DI.f.v)
@@ -94,14 +106,18 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     end
 
     % MH - MHFE %<<<2
-    % XXXXXXXXXXXXXXXXXXXXXXXX just simulate output for now
+    % TODO just simulate output for now
     DO.MH_fErr.v  = NaN.*zeros(size(DO.SR_fErr.v));
     DO.MH_AErr.v  = NaN.*zeros(size(DO.SR_AErr.v));
     DO.MH_phErr.v = NaN.*zeros(size(DO.SR_phErr.v));
+    tic;
+    DO.MH_ct.v = toc;
 
     % WR - WRMS %<<<2
     Signal.window.v = 'HFT116D'; % due to incompatibility with alg_SP-WFFT
+    tic;
     WR = qwtb('windowedRMS', Signal, CS);
+    DO.WR_ct.v = toc;
     % RMS value to the output, but in peak value:
     DO.WR_f.v       = NaN;
     DO.WR_fErr.v    = NaN;
@@ -124,7 +140,9 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     Signal.fest.v = FE.f.v;
     Signal.SPP.v = DI.SV_SPP.v;
     % Resample waveform:
+    tic;
     SV = qwtb('resamplingSVstream', Signal, CS);
+    DO.SV_ct.v = toc;
     if numel(SV.y.v) == 0
         error('gen_and_calc: resamplingSVstream resulted in empty signal!')
     end
@@ -141,7 +159,7 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     end
 
     % Plotting spectra for debug ---------------------------------------- %<<<2
-    % % show all spectra together:
+    % % show all spectra and values together, only for debug purposes:
     % figure
     % hold on
     % semilogy(FE.f.v, FE.A.v, 'or', 'linewidth', 5, ...
