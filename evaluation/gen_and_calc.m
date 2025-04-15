@@ -107,9 +107,12 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
 
     % MH - MHFE %<<<2
     % TODO just simulate output for now
-    DO.MH_fErr.v  = NaN.*zeros(size(DO.SR_fErr.v));
-    DO.MH_AErr.v  = NaN.*zeros(size(DO.SR_AErr.v));
-    DO.MH_phErr.v = NaN.*zeros(size(DO.SR_phErr.v));
+    Signal.fest.v = FE.f.v;
+    Signal.ExpComp.v = DI.f.v./DI.f.v(1);
+    MH = qwtb('MFSF', Signal, CS);
+    DO.MH_fErr.v  = MH.f.v - DI.f.v;
+    DO.MH_AErr.v  = MH.A.v - DI.A.v;
+    DO.MH_phErr.v = MH.ph.v - DI.ph.v;
     tic;
     DO.MH_ct.v = toc;
 
