@@ -17,6 +17,8 @@ CS.verbose = 0;
 CS.var.dir = '/dev/shm/qwtbvar_temp';
 CS.var.fnprefix = file_prefix;
 CS.var.cleanfiles = 1;
+CS.var.method = 'multicore';
+CS.var.procno = 4;
 
 %% Settings of signal ---------------------------------------- %<<<2
 % properties of the signal
@@ -28,16 +30,15 @@ SigParam.O.v = [0];      % nominal signal offset (V)
 % additional harmonics: none, 2, 3, 5:
 harm_multiple = 3; % set to 1 if want only main component
 if harm_multiple > 1
-    SigParam.f.v = [50 harm_multiple.*50];      % nominal signal frequency (Hz)
-    SigParam.A.v = [1 0.1];       % nominal amplitude (V)
+    SigParam.f.v =  [50 harm_multiple.*50];      % nominal signal frequency (Hz)
+    SigParam.A.v =  [1 0.1];       % nominal amplitude (V)
     SigParam.ph.v = [0 0];      % nominal signal phase (rad)
-    SigParam.O.v = [0 0];      % nominal signal offset (V)
+    SigParam.O.v =  [0 0];      % nominal signal offset (V)
 end
 SigParam.fs.v = 96e3;   % nominal sampling frequency (Hz)
 SigParam.M.v = 5;      % length of the record in multiple of periods
 % SigParam.L.v = 20./SigParam.f.v.*SigParam.fs.v;   % that is 20 periods at 50 Hz
-SigParam.THD.v = 1e-3;  % nominal harmonic distortion 
-% TODO When THD is used?
+% SigParam.THD.v = 1e-3;  % nominal harmonic distortion - not used because amplitudes are given
 SigParam.nharm.v = 1;   % nominal number of harmonics
 SigParam.noise.v = 0;% nominal signal noise (V)
 % Additional parameters:
@@ -60,7 +61,6 @@ SigParam.SV_SPP.v = 256;  %Required number of samples per period of the signal
 %---
 % signal frequency
 SigParamVar.f.v = [49.9 : 0.001 : 50.1];
-SigParamVar.f.v = [49.9 : 0.1 : 50.1]; % TODO
 if harm_multiple > 1
     SigParamVar.f.v = [SigParamVar.f.v; harm_multiple.*SigParamVar.f.v]';
 end
@@ -123,40 +123,5 @@ end
 save('-7', [file_prefix 'input_and_plot_data.mat'])
 
 end % function resampling_test
-
-%% function make_plot %<<<1
-function make_plot(quantity, titlestring, ndres, ndaxes, harm_multiple, data_index, file_prefix, xaxislabel, alg_prefixes)
-% quantity: A string specifying the quantity to be plotted (e.g., 'AErr', 'phErr', etc.).
-% titlestring: A string representing the title of the plot (e.g., 'Amplitude error', 'Phase error').
-% ndres: A structure containing the results of the calculations, with fields for different algorithms and quantities.
-% ndaxes: A structure containing the axes values for the plot, typically including the x-axis data.
-% harm_multiple: An integer indicating the harmonic multiple being analyzed (e.g., 1 for the main component, 2 for the second harmonic, etc.).
-% data_index: An integer specifying which data set to use for plotting (e.g., 1 for the main component, 2 for the second harmonic).
-% file_prefix: A string used as a prefix for saving plot files.
-% xaxislabel: A string representing the label for the x-axis of the plot.
-% alg_prefixes: A cell array of strings containing the prefixes of the algorithms to be plotted (e.g., {'FE', 'SR', 'WF'}).
-
-    figure
-    hold on
-    for alg = alg_prefixes
-        % eval example:
-        % val = ndaxes.values{1}(:,1), FE_AErr(1, :);
-        tmp = sprintf('val = ndres.%s_%s.v(data_index, :);', alg{1}, quantity);
-        eval(tmp);
-        plot(ndaxes.values{1}(:,1), val, '-x')
-    end
-    xlabel(xaxislabel);
-    ylabel([titlestring ' (Hz/V/rad)']);
-    if data_index > 1
-        title(sprintf('%s\n%d-th harmonic component', titlestring, harm_multiple));
-    else
-        title(sprintf('%s\nmain component', titlestring));
-    end
-    legend(alg_prefixes);
-    hold off
-    fn = sprintf('%s_%s_hm_%d.', file_prefix, quantity, data_index);
-    saveas(gcf(), [fn 'png'])
-    saveas(gcf(), [fn 'fig'])
-end % function
 
 % vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=matlab textwidth=80 tabstop=4 shiftwidth=4
