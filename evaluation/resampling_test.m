@@ -1,11 +1,10 @@
-% 2DO:
+% TODO
 % MHFE,
 % WFFT HFT116D,
 % Real data
-% 2nd, 3rd, 5th harmonic
-% speed!
 
 function resampling_test() %<<<1
+
 addpath('~/metrologie/Q-Wave/qwtb/qwtb')
 %% General settings ---------------------------------------- %<<<2
 % file_prefix = 'f_no_harm_2_per_-_'; % file prefix for plots and data
@@ -26,7 +25,7 @@ SigParam.f.v = [50];      % nominal signal frequency (Hz)
 SigParam.A.v = [1];       % nominal amplitude (V)
 SigParam.ph.v = [0];      % nominal signal phase (rad)
 SigParam.O.v = [0];      % nominal signal offset (V)
-% harmonics 2-5:
+% additional harmonics: none, 2, 3, 5:
 harm_multiple = 3; % set to 1 if want only main component
 if harm_multiple > 1
     SigParam.f.v = [50 harm_multiple.*50];      % nominal signal frequency (Hz)
@@ -46,8 +45,7 @@ SigParam.EstimationAlgorithm.v = 'PSFE';  % Estimation algorithm used for resamp
 SigParam.SR_Method.v = 'keepn';  %Resampling method of the SplineResample algorithm (possible values: 'keepN','minimizefs','poweroftwo')
 SigParam.SignalWindow.v = 'flattop_116D'; % that is hft116D. 'flattop_248D' is better;  % window used in SP-WFFT algorithm.
 % TODO! SigParam.SignalWindow.v = 'HFT116D'; % that 'should' be the same for
-% WRMS, but it is hardcoded in gen_and_calc due to incompatibility and errors in
-% WRMS window function.
+% WRMS, but it is hardcoded in gen_and_calc due to incompatibility and errors in WRMS window function. TODO
 SigParam.fEstimateForFit.v = 50;  % Estimate for fitting algorithm
 SigParam.SV_SPP.v = 256;  %Required number of samples per period of the signal
 
@@ -91,52 +89,35 @@ jobfn = qwtbvar('calc', 'gen_and_calc', SigParam, SigParamVar, CS);
 %% Parse results ---------------------------------------- %<<<2
 % get results
 [ndres ndresc ndaxes] = qwtbvar('result', jobfn);
-% reshape needed because of multiple harmonics:
+
+% reshape usefull in case of multiple harmonics:
 if harm_multiple > 1
     for ap = alg_prefixes
         for q = quantity_prefixes
             % example of eval:
             % res.FE_fErr.v = reshape([ndres.FE_fErr.v{:}], numel(SigParam.f.v), []);
-            tmp = sprintf('res.%s_%s.v = reshape([ndres.%s_%s.v{:}], numel(SigParam.f.v), []);', ...
+            tmp = sprintf('ndres.%s_%s.v = reshape([ndres.%s_%s.v{:}], numel(SigParam.f.v), []);', ...
                             ap{1}, q{1}, ap{1}, q{1});
             eval(tmp);
         end
     end
-else % only single harmonic:
-    for ap = alg_prefixes
-        for q = quantity_prefixes
-            % example of eval:
-            % res.FE_fErr.v = ndres.FE_fErr.v;
-            tmp = sprintf('res.%s_%s.v = ndres.%s_%s.v;', ...
-                            ap{1}, q{1}, ap{1}, q{1})
-            eval(tmp);
-        end
-    end
 end
-for ap = alg_prefixes
-    % example of eval:
-    % res.FE_ct.v = ndres.FE_ct.v;
-    tmp = sprintf('res.%s_ct.v = ndres.%s_ct.v;', ...
-                    ap{1}, ap{1});
-    eval(tmp);
-end
-
 % wrap phase results to -pi..pi:
 for ap = alg_prefixes
     % example of eval:
-    % res.FE_phErr = wrapToPi(res.FE_phErr);
-    tmp = sprintf('res.%s_phErr.v = wrapToPi(res.%s_phErr.v);', ...
+    % ndres.FE_phErr = wrapToPi(ndres.FE_phErr);
+    tmp = sprintf('ndres.%s_phErr.v = wrapToPi(ndres.%s_phErr.v);', ...
                     ap{1}, ap{1});
     eval(tmp);
 end
 
 %% Plotting ---------------------------------------- %<<<2
-make_plot('AErr', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes);
-make_plot('phErr', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes);
-make_plot('ct', res, ndaxes, 1, file_prefix, xaxislabel, alg_prefixes);
+make_plot('AErr', 'Amplitude error', ndres, ndaxes, harm_multiple, 1, file_prefix, xaxislabel, alg_prefixes);
+make_plot('phErr', 'Phase error', ndres, ndaxes, harm_multiple, 1, file_prefix, xaxislabel, alg_prefixes);
+make_plot('ct', 'Calculation time', ndres, ndaxes, harm_multiple, 1, file_prefix, xaxislabel, alg_prefixes);
 if harm_multiple > 1
-    make_plot('AErr', res, ndaxes, 2, file_prefix, xaxislabel, alg_prefixes);
-    make_plot('phErr', res, ndaxes, 2, file_prefix, xaxislabel, alg_prefixes);
+    make_plot('AErr', 'Amplitude error', ndres, ndaxes, harm_multiple, 2, file_prefix, xaxislabel, alg_prefixes);
+    make_plot('phErr', 'Phase error', ndres, ndaxes, harm_multiple, 2, file_prefix, xaxislabel, alg_prefixes);
 end
 
 save('-7', [file_prefix 'input_and_plot_data.mat'])
@@ -144,29 +125,38 @@ save('-7', [file_prefix 'input_and_plot_data.mat'])
 end % function resampling_test
 
 %% function make_plot %<<<1
-function make_plot(quantity, res, ndaxes, data_index, file_prefix, xaxislabel, alg_prefixes)
+function make_plot(quantity, titlestring, ndres, ndaxes, harm_multiple, data_index, file_prefix, xaxislabel, alg_prefixes)
+% quantity: A string specifying the quantity to be plotted (e.g., 'AErr', 'phErr', etc.).
+% titlestring: A string representing the title of the plot (e.g., 'Amplitude error', 'Phase error').
+% ndres: A structure containing the results of the calculations, with fields for different algorithms and quantities.
+% ndaxes: A structure containing the axes values for the plot, typically including the x-axis data.
+% harm_multiple: An integer indicating the harmonic multiple being analyzed (e.g., 1 for the main component, 2 for the second harmonic, etc.).
+% data_index: An integer specifying which data set to use for plotting (e.g., 1 for the main component, 2 for the second harmonic).
+% file_prefix: A string used as a prefix for saving plot files.
+% xaxislabel: A string representing the label for the x-axis of the plot.
+% alg_prefixes: A cell array of strings containing the prefixes of the algorithms to be plotted (e.g., {'FE', 'SR', 'WF'}).
+
     figure
     hold on
     for alg = alg_prefixes
         % eval example:
         % val = ndaxes.values{1}(:,1), FE_AErr(1, :);
-        tmp = sprintf('val = res.%s_%s.v(data_index, :);', alg{1}, quantity);
+        tmp = sprintf('val = ndres.%s_%s.v(data_index, :);', alg{1}, quantity);
         eval(tmp);
         plot(ndaxes.values{1}(:,1), val, '-x')
     end
     xlabel(xaxislabel);
-    ylabel([quantity ': error from nominal value (Hz/V/rad)']);
+    ylabel([titlestring ' (Hz/V/rad)']);
     if data_index > 1
-        tmp = sprintf('Error from nominal value\nn-th harmonic component');
+        title(sprintf('%s\n%d-th harmonic component', titlestring, harm_multiple));
     else
-        tmp = sprintf('Error from nominal value\nmain component');
+        title(sprintf('%s\nmain component', titlestring));
     end
-    title(tmp);
     legend(alg_prefixes);
     hold off
     fn = sprintf('%s_%s_hm_%d.', file_prefix, quantity, data_index);
-    saveas(gcf(), [fn '.png'])
-    saveas(gcf(), [fn '.fig'])
+    saveas(gcf(), [fn 'png'])
+    saveas(gcf(), [fn 'fig'])
 end % function
 
 % vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=matlab textwidth=80 tabstop=4 shiftwidth=4
