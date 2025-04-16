@@ -147,18 +147,22 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     SV = qwtb('resamplingSVstream', Signal, CS);
     DO.SV_ct.v = toc;
     if numel(SV.y.v) == 0
-        error('gen_and_calc: resamplingSVstream resulted in empty signal!')
-    end
-    % Get spectrum using simple FFT (rectangle window):
-    SV.window.v = 'rect';
-    SV_Spectrum = qwtb('SP-WFFT', SV, CS);
-    % Find peaks nearest to the signal frequencies and get amplitudes
-    % evaluated by rectangular FFT, push to the output:
-    for j = 1:numel(DI.f.v)
-        [~, idx] = min(abs(SV_Spectrum.f.v - DI.f.v(j)));
-        DO.SV_fErr.v(j) = SV_Spectrum.f.v(idx) - DI.f.v(j);
-        DO.SV_AErr.v(j) = SV_Spectrum.A.v(idx) - DI.A.v(j);
-        DO.SV_phErr.v(j) = SV_Spectrum.ph.v(idx) - DI.ph.v(j);
+        warning('gen_and_calc: resamplingSVstream resulted in empty signal. NaN values set as result.')
+        DO.SV_fErr.v  = NaN.*ones(size(DI.f.v));
+        DO.SV_AErr.v  = NaN.*ones(size(DI.f.v));
+        DO.SV_phErr.v = NaN.*ones(size(DI.f.v));
+    else
+        % Get spectrum using simple FFT (rectangle window):
+        SV.window.v = 'rect';
+        SV_Spectrum = qwtb('SP-WFFT', SV, CS);
+        % Find peaks nearest to the signal frequencies and get amplitudes
+        % evaluated by rectangular FFT, push to the output:
+        for j = 1:numel(DI.f.v)
+            [~, idx] = min(abs(SV_Spectrum.f.v - DI.f.v(j)));
+            DO.SV_fErr.v(j) = SV_Spectrum.f.v(idx) - DI.f.v(j);
+            DO.SV_AErr.v(j) = SV_Spectrum.A.v(idx) - DI.A.v(j);
+            DO.SV_phErr.v(j) = SV_Spectrum.ph.v(idx) - DI.ph.v(j);
+        end
     end
 
     % Plotting spectra for debug ---------------------------------------- %<<<2
