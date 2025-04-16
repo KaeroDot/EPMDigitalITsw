@@ -134,7 +134,7 @@ if harm_multiple > 1
     make_plot('phErr', 'Phase error', ndres, ndaxes, harm_multiple, 2, file_prefix, xaxislabel, alg_prefixes);
 end
 
-save('-7', [file_prefix 'input_and_plot_data.mat'])
+save('-7', [file_prefix '_input_and_plot_data.mat'])
 
 end % function resampling_test
 

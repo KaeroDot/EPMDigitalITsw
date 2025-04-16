@@ -29,7 +29,7 @@ function make_plot(quantity, titlestring, ndres, ndaxes, harm_multiple, data_ind
     end
     legend(alg_prefixes);
     hold off
-    fn = sprintf('%s_%s_hm_%d.', file_prefix, quantity, data_index);
+    fn = sprintf('%s_%s_h%d.', file_prefix, quantity, data_index);
     saveas(gcf(), [fn 'png'])
     saveas(gcf(), [fn 'fig'])
 end % function
