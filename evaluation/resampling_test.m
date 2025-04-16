@@ -3,12 +3,23 @@
 % WFFT HFT116D,
 % Real data
 
-function resampling_test() %<<<1
+function resampling_test(test_case, file_prefix, harm_multiple) %<<<1
 
+% addpath('~/metrologie/Q-Wave/qwtb/qwtb')
 addpath('~/metrologie/Q-Wave/qwtb/qwtb')
-%% General settings ---------------------------------------- %<<<2
-% file_prefix = 'f_no_harm_2_per_-_'; % file prefix for plots and data
-file_prefix = 'quick_test'; % file prefix for plots and data
+%% Input settings ---------------------------------------- %<<<2
+if not(exist('test_case'))
+    test_case = 1; % nominal test case number 1, signal frequency
+end
+if not(exist('file_prefix'))
+    file_prefix = 'quick_test'; % file prefix for plots and data
+end
+% additional harmonics: none, 2, 3, 5:
+if not(exist('harm_multiple'))
+    harm_multiple = 1; % set to 1 if want only main component
+end
+
+% constants:
 alg_prefixes = {'FE', 'SR', 'WF', 'MH', 'WR', 'SV'}; % algorithm prefixes
 quantity_prefixes = {'fErr', 'AErr', 'phErr'}; % quantity prefixes
 
@@ -18,7 +29,7 @@ CS.var.dir = '/dev/shm/qwtbvar_temp';
 CS.var.fnprefix = file_prefix;
 CS.var.cleanfiles = 1;
 CS.var.method = 'multicore';
-CS.var.procno = 4;
+CS.var.procno = 20;
 
 %% Settings of signal ---------------------------------------- %<<<2
 % properties of the signal
@@ -27,8 +38,6 @@ SigParam.f.v = [50];      % nominal signal frequency (Hz)
 SigParam.A.v = [1];       % nominal amplitude (V)
 SigParam.ph.v = [0];      % nominal signal phase (rad)
 SigParam.O.v = [0];      % nominal signal offset (V)
-% additional harmonics: none, 2, 3, 5:
-harm_multiple = 3; % set to 1 if want only main component
 if harm_multiple > 1
     SigParam.f.v =  [50 harm_multiple.*50];      % nominal signal frequency (Hz)
     SigParam.A.v =  [1 0.1];       % nominal amplitude (V)
@@ -51,37 +60,42 @@ SigParam.fEstimateForFit.v = 50;  % Estimate for fitting algorithm
 SigParam.SV_SPP.v = 256;  %Required number of samples per period of the signal
 
 %% Varied parameter ---------------------------------------- %<<<2
-%---
-% % number of periods:
-% % round is needed to prevent rounding errors in WaveformGenerator algorithm!
-% SigParamVar.M.v = [2 : 0.1 : 20];
-% xaxisquantity = 'M.v';
-% xaxislabel = 'Record length (samples)';
-
-%---
-% signal frequency
-SigParamVar.f.v = [49.9 : 0.001 : 50.1];
-if harm_multiple > 1
-    SigParamVar.f.v = [SigParamVar.f.v; harm_multiple.*SigParamVar.f.v]';
+if test_case == 1 % varied number of periods %<<<3
+    % round is needed to prevent rounding errors in WaveformGenerator algorithm!
+    SigParamVar.M.v = [3 : 0.1 : 20];
+    xaxisquantity = 'M.v';
+    xaxislabel = 'Record length (samples)';
+elseif test_case == 2 % varied signal frequency %<<<3
+    SigParamVar.f.v = [49.9 : 0.001 : 50.1];
+    if harm_multiple > 1
+        SigParamVar.f.v = [SigParamVar.f.v; harm_multiple.*SigParamVar.f.v]';
+    end
+    % set same value for number of samples instead the number of periods:
+    SigParam = rmfield(SigParam, 'M');
+    % SigParam.L.v = 2./SigParam.f.v(1).*SigParam.fs.v; % 5 periods at 50 Hz, % Results differ for 2 or 5 periods
+    SigParam.L.v = 5./SigParam.f.v(1).*SigParam.fs.v; % 5 periods at 50 Hz, % Results differ for 2 or 5 periods
+    xaxisquantity = 'f.v';
+    xaxislabel = 'Signal frequency (Hz)';
+elseif test_case == 3 % varied sampling frequency %<<<3
+    % sampling frequency
+    SigParamVar.fs.v = [4000 : 100/3 : 96000];
+    xaxisquantity = 'fs.v';
+    xaxislabel = 'Sampling frequency (Hz)';
+elseif test_case == 4 % varied signal noise %<<<3
+    SigParamVar.noise.v = logspace(-6, -2, 200);
+    xaxisquantity = 'noise.v';
+    xaxislabel = 'Noise (σ)';
+else
+    error('resampling_test: unknown test_case!')
 end
-% set same value for number of samples instead the number of periods:
-SigParam = rmfield(SigParam, 'M');
-% SigParam.L.v = 2./SigParam.f.v(1).*SigParam.fs.v; % 5 periods at 50 Hz, % Results differ for 2 or 5 periods
-SigParam.L.v = 5./SigParam.f.v(1).*SigParam.fs.v; % 5 periods at 50 Hz, % Results differ for 2 or 5 periods
-xaxisquantity = 'f.v';
-xaxislabel = 'Signal frequency (Hz)';
 
-%---
-% % sampling frequency
-% SigParamVar.fs.v = [4000 : 100/3 : 96000];
-% xaxisquantity = 'fs.v';
-% xaxislabel = 'Sampling frequency (Hz)';
-
-%---
-% % Signal noise
-% SigParamVar.noise.v = logspace(-6, -2, 200);
-% xaxisquantity = 'noise.v';
-% xaxislabel = 'Noise (σ)';
+%% Ensure path ---------------------------------------- %<<<2
+fdir = fileparts(file_prefix);
+if not(isempty(fdir))
+    if not(exist(fdir, 'dir'))
+        mkdir(fdir);
+    end
+end
 
 %% Calculation ---------------------------------------- %<<<2
 jobfn = qwtbvar('calc', 'gen_and_calc', SigParam, SigParamVar, CS);
