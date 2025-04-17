@@ -70,6 +70,7 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     if ~exist('verbose', 'var') verbose = 0; end
     if isempty(verbose) verbose = 0; end
     verbose = not(not(verbose));
+    verbose = 1; % TODO
 
     %% Calculate interpolation and decimation coefficients %<<<1
     % Relative error of the number of samples per period from the nominal
@@ -88,6 +89,10 @@ function [y_res, N, M, fs_res, aafilter, t_res] = resamplingSVstream(y, fs, f, S
     % Interpolation coefficient:
     % (equation 7 in the pdf, rounding has to be used to prevent errors)
     N = round(min_M .* SPP .* f ./ fs);
+    if N < 1
+        N = 1;
+        warning('resamplingSVstream: Interpolation coefficient `N` was calculated to less than 1! Fixed to value of 1.')
+    end
     if verbose printf('resamplingSVstream: Interpolation coefficient `N` is: %d\n', N) end
 
     % Actual used decimation coefficient:
