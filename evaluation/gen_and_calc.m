@@ -142,6 +142,9 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     % Set estimated output frequency and samples per periods for resamplingSVstream:
     Signal.fest.v = FE.f.v;
     Signal.SPP.v = DI.SV_SPP.v;
+    if isfield(DI, 'max_rel_A_err')
+        Signal.max_rel_A_err.v = DI.max_rel_A_err.v;
+    end
     % Resample waveform:
     tic;
     SV = qwtb('resamplingSVstream', Signal, CS);

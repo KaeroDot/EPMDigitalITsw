@@ -21,7 +21,7 @@ function make_plot(quantity, titlestring, ndres, ndaxes, harm_multiple, data_ind
         plot(ndaxes.values{1}(:,1), val, plotprops{j})
     end
     xlabel(xaxislabel);
-    ylabel([titlestring ' (Hz/V/rad)']);
+    ylabel([titlestring ' (Hz/V/rad/s)']);
     if data_index > 1
         title(sprintf('%s\n%d-th harmonic component', titlestring, harm_multiple));
     else
