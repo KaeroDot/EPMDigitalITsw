@@ -85,6 +85,11 @@ elseif test_case == 4 % varied signal noise %<<<3
     SigParamVar.noise.v = logspace(-6, -2, 200);
     xaxisquantity = 'noise.v';
     xaxislabel = 'Noise (σ)';
+elseif test_case == 5 % calculation time for different max_rel_A_err of resamplingSVstream algorithm
+    SigParam.max_rel_A_err.v = 1e-6;
+    SigParamVar.max_rel_A_err.v = logspace(-6, -1, 100);
+    xaxisquantity = 'max_rel_A_err.v';
+    xaxislabel = 'Target amplitude error (V/V)'
 else
     error('resampling_test: unknown test_case!')
 end
