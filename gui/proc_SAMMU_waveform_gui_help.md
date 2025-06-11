@@ -142,3 +142,7 @@ Cell of structures `DOmain`, `DOspectrum` and `DI` represents input and output
 quantities for one section (as determined by "Split by (s)") and one waveform,
 where e.g. `DOmain{j, k}` is result for waveform `j` and section `k`. Cell
 contains structure with quantities according QWTB format.
+
+## This webpage
+
+This webpage address was shortened as: [https://tinyurl.com/digitalITgui](https://tinyurl.com/digitalITgui)
