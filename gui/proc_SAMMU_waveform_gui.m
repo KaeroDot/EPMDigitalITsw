@@ -231,7 +231,7 @@ function make_gui(welcome_message) %<<<2
     uig.col_step = 28; % grid size of columns of ui controls
     uig.col_off = 1; % offset of columns of ui controls
     uig.total_width = 113; % total width of the gui window
-    uig.total_height = 17; % total height of the gui window
+    uig.total_height = 20; % total height of the gui window
     uig.row = 1; % index of row of ui controls
     uig.col = 1; % index of column of ui controls
 
@@ -257,7 +257,17 @@ function make_gui(welcome_message) %<<<2
     %% Create ui controls %<<<3
     % All controls must be children of f_main, otherwise automatic searching for
     % handles of uicontrols find_h_by_tag() will not work!
-    uig.row = 1; % --------------- row 1 file input
+    uig.row = 1; % --------------- row 1 convert from pcap
+    uig.col = 1;
+    % button pcap convert
+    b_datafile = uicontrol (f_main, ...
+                        'tag',      'b_pcapconvert', ...
+                        'string',   'Convert pcap file to csv...', ...
+                        'callback', @b_pcapconvert_callback, ...
+                        'units',    'characters', ...
+                        'tooltipstring', 'Open dialog to convert pcap file into a csv that can be processed by this GUI.', ...
+                        'position', uigrid_position(uig, 4));
+    uig.row = uig.row + 1; % --------------- row 2 file input
     uig.col = 1;
     % button Filename
     b_datafile = uicontrol (f_main, ...
@@ -277,7 +287,7 @@ function make_gui(welcome_message) %<<<2
                         'horizontalalignment',  'left', ...
                         'tooltipstring', 'File with the sampled data.', ...
                         'position',  uigrid_position(uig, 3));
-    uig.row = uig.row + 1;
+    uig.row = uig.row + 1; % --------------- row 3 algorithms and split
     uig.col = 1;
     % label for listbox with algorithms
     t_alg = uicontrol(f_main, ...
@@ -709,10 +719,16 @@ function b_alg_callback(~, ~) %<<<2
     end
 end % function b_alg_callback(~, ~)
 
+function b_pcapconvert_callback(~, ~) %<<<2
+    % shows subGUI for conversion of pcap files
+    global udata
+    create_pcap_GUI();
+end % function b_pcapconvert_callback(~, ~)
+
 function h = find_h_by_tag(tag) %<<<2
 % finds handle to uicontrol defined by a value in tag
-    f_main = gcbf();
-    children = get(f_main, 'children');
+    fig = gcbf(); % actual figure handle
+    children = get(fig, 'children');
     for j = 1:numel(children)
         ch_tag = get(children(j), 'tag');
         if strcmp(ch_tag, tag)
@@ -722,6 +738,270 @@ function h = find_h_by_tag(tag) %<<<2
     end
     error(['GUI error: uicontrol with specified tag `' tag '` was not found!'])
 end % function
+
+%% functions for subGUI pcap conversion %<<<1
+function create_pcap_GUI() %<<<2
+% subGUIfunction
+    % globals
+    global pcapGUIname; % name of the GUI
+    global udata;    % structure with user input data
+
+    % Define constants
+    pcapGUIname = 'pcap_gui';
+    udata.pcap_datafile = '50Hz.pcapng'; % pcap file with sampled data
+    udata.CONST_pcap_quantities = {'I0', 'I1', 'I2', 'I3', 'U0', 'U1', 'U2', 'U3'};
+
+    %% Define grid for uicontrols and gui dimensions %<<<3
+    % grid properties for the uicontrols:
+    uig.row_step = 3; % grid size of rows of ui controls
+    uig.row_off = 1; % offset of rows of ui controls
+    uig.col_step = 28; % grid size of columns of ui controls
+    uig.col_off = 1; % offset of columns of ui controls
+    uig.total_width = 113; % total width of the gui window
+    uig.total_height = 20; % total height of the gui window
+    uig.row = 1; % index of row of ui controls
+    uig.col = 1; % index of column of ui controls
+
+    %% create gui window %<<<3
+    % Because of matlab, figure instead of uifigure must be used
+    % (matlab cannot set property units in uifigure)
+    f_pcap = figure('name',        pcapGUIname, ...
+                        'tag',          'f', ...
+                        'toolbar',      'none', ...
+                        'menubar',      'none', ...
+                        'units',        'characters');
+    % Set size of the GUI without changing the initial position given by
+    % operating system:
+    pos = get(f_pcap, 'position');
+    set(f_pcap, 'position', [pos(1) ...
+                             pos(2)-(uig.total_height - pos(4)) ...
+                             uig.total_width ...
+                             uig.total_height]);
+
+    %% Create ui controls %<<<3
+    % All controls must be children of f_pcap, otherwise automatic searching for
+    % handles of uicontrols find_h_by_tag() will not work!
+    uig.row = 1; % --------------- row 1 file input
+    uig.col = 1;
+    % button Filename
+    b_pcap_datafile = uicontrol (f_pcap, ...
+                        'tag',      'b_pcap_datafile', ...
+                        'string',   'Select pcap datafile..', ...
+                        'callback', @b_pcap_datafile_callback, ...
+                        'units',    'characters', ...
+                        'tooltipstring', 'Open file dialog to select a pcap file with the sampled values.', ...
+                        'position', uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % label for filename
+    t_pcap_datafile = uicontrol(f_pcap, ...
+                        'tag',      't_pcap_datafile', ...
+                        'Style',    'text', ...
+                        'string',   udata.pcap_datafile, ...
+                        'units',    'characters', ...
+                        'horizontalalignment',  'left', ...
+                        'tooltipstring', 'pcap file with the sampled data.', ...
+                        'position',  uigrid_position(uig, 3));
+    uig.row = uig.row + 1; % --------------- row 2 button read MAC addresses button
+    uig.col = 1;
+    % button read MAC
+    b_pcap_readmac = uicontrol (f_pcap, ...
+                        'tag',      'b_pcap_readmac', ...
+                        'string',   'Read MAC addresses from pcap file..', ...
+                        'callback', @b_pcap_readmac_callback, ...
+                        'units',    'characters', ...
+                        'tooltipstring', 'Read MAC addresses from the selected pcap file.', ...
+                        'position', uigrid_position(uig, 3));
+    uig.row = uig.row + 1; % --------------- row 3 source destinations lists
+    uig.col = 1;
+    % label for source MACs
+    t_pcap_sourcemac = uicontrol(f_pcap, ...
+                        'tag',      't_pcap_sourcemac', ...
+                        'Style',    'text', ...
+                        'string',   'Source MAC address:', ...
+                        'units',    'characters', ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % listbox with source MACs
+    p_pcap_sourcemac = uicontrol(f_pcap, ...
+                        'tag',      'p_pcap_sourcemac', ...
+                        'Style',    'popupmenu', ...
+                        'string',   '', ...
+                        'callback', @b_pcap_source_callback, ...
+                        'value',    1, ...
+                        'units',    'characters', ...
+                        'tooltipstring', 'Select source MAC address.', ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % label for destination MAC
+    t_pcap_destmac = uicontrol(f_pcap, ...
+                        'tag',      't_pcap_destmac', ...
+                        'Style',    'text', ...
+                        'string',   sprintf('Destination MAC address:'), ...
+                        'units',    'characters', ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % listbox with destination MACs
+    p_pcap_destmac = uicontrol(f_pcap, ...
+                        'tag',      'p_pcap_destmac', ...
+                        'Style',    'popupmenu', ...
+                        'string',   '', ...
+                        'callback', @b_pcap_dest_callback, ...
+                        'value',    1, ...
+                        'units',    'characters', ...
+                        'tooltipstring', 'Select source MAC address.', ...
+                        'position',  uigrid_position(uig));
+    uig.row = uig.row + 1; % --------------- row 4 quantity list, convert button
+    uig.col = 1;
+    % listbox with quantities
+    p_pcap_quant = uicontrol(f_pcap, ...
+                        'tag',      'p_pcap_quant', ...
+                        'Style',    'popupmenu', ...
+                        'string',   udata.CONST_pcap_quantities, ...
+                        'callback', @b_pcap_quant, ...
+                        'value',    1, ...
+                        'units',    'characters', ...
+                        'tooltipstring', 'Select quantity to process', ...
+                        'position',  uigrid_position(uig));
+    uig.col = uig.col + 1;
+    % button Convert
+    b_pcap_convert = uicontrol (f_pcap, ...
+                        'tag',      'b_pcap_convert', ...
+                        'string',    'Convert', ...
+                        'callback',  @b_pcap_convert_callback, ...
+                        'units',     'characters', ...
+                        'tooltipstring', sprintf('Convert pcap file to csv'), ...
+                        'position',  uigrid_position(uig, 3));
+
+    % force f_pcap window to be shown on top of main GUI figure %<<<3
+    figure(f_pcap)
+
+end % function create_pcap_GUI()
+
+function b_pcap_datafile_callback(~, ~) %<<<2
+% What happens when button 'Select pcap datafile..' is pressed
+% show filepath dialog
+
+    t_datafile = find_h_by_tag('t_pcap_datafile');
+    datafile = get(t_datafile, 'string');
+
+    if not(isempty(datafile))
+        [DIR, ~, ~] = fileparts(datafile);
+    else
+        DIR = pwd;
+    end
+    fn = fullfile(DIR, '*.*'); % open all types of files
+    [fname, fpath, ~] = uigetfile(fn, ...
+                                       'Select pcap file with sampled data', ...
+                                       datafile, ...
+                                       'MultiSelect', 'off');
+    if ischar(fname)
+        % cancel was not selected
+        set(t_datafile, 'string', fullfile(fpath, fname))
+    end
+end % function b_pcap_datafile_callback
+
+function b_pcap_readmac_callback(~, ~) %<<<2
+% What happens when user selects button read MAC addresses
+    % find tshark binary
+    tsharkPath = get_tshark_binary_path();
+    if isempty(tsharkPath)
+        msgbox(sprintf('tshark was not found.\nWireshark has to be installed on your computer to get this working.'));
+    end
+
+    pcapPath = get(find_h_by_tag('t_pcap_datafile'), 'string');
+    if not(exist(pcapPath, 'file'))
+        msgbox(['The filename `' datafile '` does not exist!'], ...
+               'Input error', ...
+               'modal');
+        return
+    end
+
+    % load MAC addresses
+    h_msgbox = msgbox(sprintf('Running tshark to scan for all MAC addresses in the pcap file, please wait.\nThis can take many minutes for pcap files of GB size!\nThis message will close when finished.'));
+    [sourceMacsCell, destMacsCell] = get_macs_from_pcap(pcapPath, tsharkPath, 1, 1);
+    if ishandle(h_msgbox)
+        close(h_msgbox);
+    end
+    if isempty(sourceMacsCell)
+        msgbox('Source MAC addresses were not found.')
+    end
+    if isempty(destMacsCell)
+        msgbox('Destination MAC addresses were not found.')
+    end
+
+    % fill in MAC addresses into listboxes
+    set(find_h_by_tag('p_pcap_sourcemac'), 'string', sourceMacsCell)
+    set(find_h_by_tag('p_pcap_destmac'), 'string', destMacsCell)
+
+end % function b_pcap_readmac_callback(~, ~)
+
+function b_pcap_source_callback(~, ~) %<<<2
+% What happens when user select source MAC address
+end % function b_pcap_souce_callback(~, ~)
+
+function b_pcap_dest_callback(~, ~) %<<<2
+% What happens when user select destination MAC address
+end % function b_pcap_souce_callback(~, ~)
+
+function b_pcap_quant(~, ~) %<<<2
+% What happens when user select a quantity
+end % function b_pcap_quant(~, ~)
+
+function b_pcap_convert_callback(~, ~) %<<<2
+% What happens when user selects button Convert pcap file
+    global udata;    % structure with user input data
+
+    % find tshark binary
+    tsharkPath = get_tshark_binary_path();
+    if isempty(tsharkPath)
+        msgbox(sprintf('tshark was not found.\nWireshark has to be installed on your computer to get this working.'));
+    end
+
+    % get pcap file name and check if exist
+    pcapPath = get(find_h_by_tag('t_pcap_datafile'), 'string');
+    if not(exist(pcapPath, 'file'))
+        msgbox(['The filename `' datafile '` does not exist!'], ...
+               'Input error', ...
+               'modal');
+        return
+    end
+
+    % get MAC addresses
+    sourceMACvalue = get(find_h_by_tag('p_pcap_sourcemac'), 'value');
+    destMACvalue = get(find_h_by_tag('p_pcap_sourcemac'), 'value');
+    sourceMAC = get(find_h_by_tag('p_pcap_sourcemac'), 'string')(sourceMACvalue);
+    destMAC = get(find_h_by_tag('p_pcap_destmac'), 'string')(destMACvalue);
+    % TODO XXXXX check if MACs are not empty!
+
+    % All ok, save gui setup
+    set_udata_to_pref();
+
+    % run conversion using tshark
+    h_msgbox = msgbox(sprintf('Running tshark to convert pcap format into csv, please wait.\nThis can take many minutes for pcap files of GB size!\nThis message will close when finished.'));
+    [Time, Counters, Data, tmpPath] = get_data_from_pcap(pcapPath, sourceMAC{1}, destMAC{1}, tsharkPath, 1, 1);
+    if isempty(Time)
+        msgbox('Conversion failed.')
+        % TODO XXX quit this function!
+    end
+
+    % Write all quantities to csv sheets:
+    for j = 1:size(Data, 2)
+        ASDUnumber = floor((j-1)/8);
+        quantity = udata.CONST_pcap_quantities{rem(j, 8) + 1};
+
+        [DIR, NAME, EXT] = fileparts(tmpPath);
+        fn = fullfile(DIR, NAME);
+        fn = [fn '.ASDU_' num2str(ASDUnumber) '_' quantity '.csv'];
+        dlmwrite(fn, Data(:, j));
+    end % for
+
+    if ishandle(h_msgbox)
+        close(h_msgbox);
+    end
+
+    % TODO XXXX write csv file into main gui
+    % TODO XXXX close this subGUI 
+end % function b_pcap_convert_callback(~, ~)
 
 %% functions for data processing %<<<1
 function y = load_datafile(filename) %<<<2
@@ -864,6 +1144,7 @@ function proc_SAMMU_waveform(udata) %<<<2
     end
 
     % data will be split into this number of sections: 'split_sections'
+    comment = '';
     if udata.split == 0
         % no splitting
         samples_in_section = samples;
