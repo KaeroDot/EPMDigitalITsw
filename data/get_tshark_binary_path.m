@@ -58,7 +58,7 @@ function tsharkPath = get_tshark_binary_path(verbose)
     if isempty(tsharkPath)
         disp('tshark.exe not found in registry.');
     else
-        disp(sprintf('Found tshark.exe at: %s\n', tsharkPath))
+        if verbose disp(sprintf('Found tshark.exe at: %s\n', tsharkPath)), end
     end % if isempty
 
 end % function

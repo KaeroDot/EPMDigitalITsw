@@ -1,6 +1,10 @@
-
 % Read sampled values from pcap file for selected source and destination.
-function [Time, Counters, Data]= get_data_from_pcap(pcapPath, sourceMac, destMac, tsharkPath, skip_if_exist, verbose)
+% Returns Time vector, Counters matrix with numner of collumns equal to the
+% number of ASDUs (Application Specific Data Unit), Data with current and
+% voltage collumns for each ASDU (I0, I1, I2, I3, U0, U1, U2, U3), and file path
+% of the temporary file with all data as exported by tshark.
+
+function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMac, destMac, tsharkPath, skip_if_exist, verbose)
     % Comment on functionality ---------------------- %<<<1
     % One could process output of tshark command directly without using
     % temporary files, unfortunately a large output can fail, mostly when
