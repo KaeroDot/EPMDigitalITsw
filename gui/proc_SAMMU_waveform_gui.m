@@ -1242,7 +1242,8 @@ function proc_SAMMU_waveform(udata) %<<<2
                 en = samples;
             end
             % cut the data:
-            DI.y.v = y(k, st : en)(:)';
+            DI.y.v = y(k, st : en);
+            DI.y.v = DI.y.v(:)';
             DIcell{k, j} = DI; % store inputs for reference
             % calculate
             [DOmain{k, j}, DOspectrum{k, j}] = calculate(DI, udata.alg);
