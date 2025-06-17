@@ -222,7 +222,8 @@ function make_gui(welcome_message) %<<<2
 % successful installation is shown.
     %% define globals %<<<3
     global GUIname; % defined in proc_SAMMU_waveform_gui()
-    global udata;    % structure with user input data
+    global udata;   % structure with user input data
+    global f_main;  % main GUI figure handle
 
     %% Define grid for uicontrols and gui dimensions %<<<3
     % grid properties for the uicontrols:
@@ -704,7 +705,7 @@ end % function b_calc_callback
 function b_help_callback(~, ~) %<<<2
 % What happens when button Help is pressed
 % open web page, hardcoded
-web('https://github.com/KaeroDot/EPMDigitalITsw/blob/main/gui/proc_SAMMU_waveform_gui_help.md', '-browser')
+    web('https://github.com/KaeroDot/EPMDigitalITsw/blob/main/gui/proc_SAMMU_waveform_gui_help.md', '-browser')
 end % function b_help_callback
 
 function b_alg_callback(~, ~) %<<<2
@@ -725,9 +726,13 @@ function b_pcapconvert_callback(~, ~) %<<<2
     create_pcap_GUI();
 end % function b_pcapconvert_callback(~, ~)
 
-function h = find_h_by_tag(tag) %<<<2
+function h = find_h_by_tag(tag, fig) %<<<2
 % finds handle to uicontrol defined by a value in tag
-    fig = gcbf(); % actual figure handle
+% if second input is ommited, current figure is supposed
+    if not(exist('fig', 'var'))
+        % search in current figure
+        fig = gcbf();
+    end
     children = get(fig, 'children');
     for j = 1:numel(children)
         ch_tag = get(children(j), 'tag');
@@ -758,7 +763,7 @@ function create_pcap_GUI() %<<<2
     uig.col_step = 28; % grid size of columns of ui controls
     uig.col_off = 1; % offset of columns of ui controls
     uig.total_width = 113; % total width of the gui window
-    uig.total_height = 20; % total height of the gui window
+    uig.total_height = 14; % total height of the gui window
     uig.row = 1; % index of row of ui controls
     uig.col = 1; % index of column of ui controls
 
@@ -769,7 +774,8 @@ function create_pcap_GUI() %<<<2
                         'tag',          'f', ...
                         'toolbar',      'none', ...
                         'menubar',      'none', ...
-                        'units',        'characters');
+                        'units',        'characters', ...
+                        'windowstyle',  'modal');
     % Set size of the GUI without changing the initial position given by
     % operating system:
     pos = get(f_pcap, 'position');
@@ -852,17 +858,6 @@ function create_pcap_GUI() %<<<2
                         'position',  uigrid_position(uig));
     uig.row = uig.row + 1; % --------------- row 4 quantity list, convert button
     uig.col = 1;
-    % listbox with quantities
-    p_pcap_quant = uicontrol(f_pcap, ...
-                        'tag',      'p_pcap_quant', ...
-                        'Style',    'popupmenu', ...
-                        'string',   udata.CONST_pcap_quantities, ...
-                        'callback', @b_pcap_quant, ...
-                        'value',    1, ...
-                        'units',    'characters', ...
-                        'tooltipstring', 'Select quantity to process', ...
-                        'position',  uigrid_position(uig));
-    uig.col = uig.col + 1;
     % button Convert
     b_pcap_convert = uicontrol (f_pcap, ...
                         'tag',      'b_pcap_convert', ...
@@ -871,8 +866,20 @@ function create_pcap_GUI() %<<<2
                         'units',     'characters', ...
                         'tooltipstring', sprintf('Convert pcap file to csv'), ...
                         'position',  uigrid_position(uig, 3));
+    uig.col = uig.col + 3;
+    % button Help
+    b_pcap_help = uicontrol (f_pcap, ...
+                        'tag',      'b_pcap_help', ...
+                        'string',    'Help', ...
+                        'callback',  @b_pcap_help_callback, ...
+                        'units',     'characters', ...
+                        'tooltipstring', sprintf('Show help in web browser'), ...
+                        'position',  uigrid_position(uig));
 
-    % force f_pcap window to be shown on top of main GUI figure %<<<3
+    % finalize subGUI window %<<<3
+    % change color of the figure background to distinct from main GUI window
+    set(f_pcap, 'color', '#FFF5DA');
+    % force f_pcap window to be shown on top of main GUI figure
     figure(f_pcap)
 
 end % function create_pcap_GUI()
@@ -910,14 +917,14 @@ function b_pcap_readmac_callback(~, ~) %<<<2
 
     pcapPath = get(find_h_by_tag('t_pcap_datafile'), 'string');
     if not(exist(pcapPath, 'file'))
-        msgbox(['The filename `' datafile '` does not exist!'], ...
+        msgbox(['The filename `' pcapPath '` does not exist!'], ...
                'Input error', ...
                'modal');
         return
     end
 
     % load MAC addresses
-    h_msgbox = msgbox(sprintf('Running tshark to scan for all MAC addresses in the pcap file, please wait.\nThis can take many minutes for pcap files of GB size!\nThis message will close when finished.'));
+    h_msgbox = msgbox(sprintf('Running tshark to scan for all MAC addresses in the pcap file, please wait.\nThis can take MANY minutes for pcap files of GB size!\nThis message will close when finished.'));
     [sourceMacsCell, destMacsCell] = get_macs_from_pcap(pcapPath, tsharkPath, 1, 1);
     if ishandle(h_msgbox)
         close(h_msgbox);
@@ -950,6 +957,7 @@ end % function b_pcap_quant(~, ~)
 function b_pcap_convert_callback(~, ~) %<<<2
 % What happens when user selects button Convert pcap file
     global udata;    % structure with user input data
+    global f_main;  % main GUI figure handle
 
     % find tshark binary
     tsharkPath = get_tshark_binary_path();
@@ -967,11 +975,21 @@ function b_pcap_convert_callback(~, ~) %<<<2
     end
 
     % get MAC addresses
-    sourceMACvalue = get(find_h_by_tag('p_pcap_sourcemac'), 'value');
-    destMACvalue = get(find_h_by_tag('p_pcap_sourcemac'), 'value');
-    sourceMAC = get(find_h_by_tag('p_pcap_sourcemac'), 'string')(sourceMACvalue);
-    destMAC = get(find_h_by_tag('p_pcap_destmac'), 'string')(destMACvalue);
-    % TODO XXXXX check if MACs are not empty!
+    sourceMAC = get(find_h_by_tag('p_pcap_sourcemac'), 'string');
+    destMAC = get(find_h_by_tag('p_pcap_destmac'), 'string');
+    % multiple - get cell
+    if not(isempty(sourceMAC))
+        sourceMAC = sourceMAC(get(find_h_by_tag('p_pcap_sourcemac'), 'value'));
+    end
+    if not(isempty(destMAC))
+        destMAC = destMAC(get(find_h_by_tag('p_pcap_destmac'), 'value'));
+    end
+
+    % check if MACs are not empty
+    if or(isempty(sourceMAC), isempty(destMAC))
+        msgbox('The source or destination MAC address is empty! You have first to "Read MAC addresses from pcap file".')
+        return
+    end
 
     % All ok, save gui setup
     set_udata_to_pref();
@@ -981,10 +999,11 @@ function b_pcap_convert_callback(~, ~) %<<<2
     [Time, Counters, Data, tmpPath] = get_data_from_pcap(pcapPath, sourceMAC{1}, destMAC{1}, tsharkPath, 1, 1);
     if isempty(Time)
         msgbox('Conversion failed.')
-        % TODO XXX quit this function!
+        return
     end
 
     % Write all quantities to csv sheets:
+    filenametomain = '';        % filename that will be put into main GUI data file input
     for j = 1:size(Data, 2)
         ASDUnumber = floor((j-1)/8);
         quantity = udata.CONST_pcap_quantities{rem(j, 8) + 1};
@@ -993,15 +1012,31 @@ function b_pcap_convert_callback(~, ~) %<<<2
         fn = fullfile(DIR, NAME);
         fn = [fn '.ASDU_' num2str(ASDUnumber) '_' quantity '.csv'];
         dlmwrite(fn, Data(:, j));
+        if strcmp(quantity, 'U1')
+            filenametomain = fn;
+        end
     end % for
 
     if ishandle(h_msgbox)
         close(h_msgbox);
     end
 
+    msgbox(sprintf('pcap file was converted.\nFor selected MAC addresses, %d ASDU units were found. Each quantity (I0, I1, ..., U3) was saved into a separate .csv file. File for the U1 voltage will be preselected in the main window.', ...
+        ASDUnumber));
+
+    set(find_h_by_tag('t_datafile', f_main), 'string', filenametomain);
+
+    close(gcf())
+
     % TODO XXXX write csv file into main gui
-    % TODO XXXX close this subGUI 
 end % function b_pcap_convert_callback(~, ~)
+
+function b_pcap_help_callback(~, ~) %<<<2
+% What happens when button Help is pressed
+% open web page, hardcoded
+    web('https://github.com/KaeroDot/EPMDigitalITsw/blob/main/gui/proc_SAMMU_waveform_gui_help.md', '-browser')
+    % XXX fix to proper section of the help
+end % function b_pcap_help_callback(~, ~)
 
 %% functions for data processing %<<<1
 function y = load_datafile(filename) %<<<2
