@@ -8,6 +8,8 @@ function proc_SAMMU_waveform_gui() %<<<1
     GUIname = 'process SAMMU waveform';
     udata.CONST_available_algorithms = {'PSFE>SplineResample>FFT', 'PSFE>resampleSVstream>FFT'}; % Must be a constant - if changed, change also function calculate()!
     udata.CONST_srmethod = {'keepN', 'minimizefs', 'poweroftwo'}; % if changed, change also function calculate()!
+    % this is order in which quantities are in pcap files:
+    udata.CONST_pcap_quantities = {'I0', 'I1', 'I2', 'I3', 'U0', 'U1', 'U2', 'U3'};
     udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
     udata.datafile = ''; % file with sampled data (default value see get_udata_from_pref)
     udata.split = ''; % data split period (default value see get_udata_from_pref)
@@ -761,11 +763,12 @@ function create_pcap_GUI() %<<<2
     % globals
     global pcapGUIname; % name of the GUI
     global udata;    % structure with user input data
+    global f_main;   % main GUI figure handle
+    global f_pcap;   % subGUI figure handle
 
     % Define constants
     pcapGUIname = 'pcap converter';
     udata.pcap_datafile = '50Hz.pcapng'; % pcap file with sampled data
-    udata.CONST_pcap_quantities = {'I0', 'I1', 'I2', 'I3', 'U0', 'U1', 'U2', 'U3'};
 
     %% Define grid for uicontrols and gui dimensions %<<<3
     % grid properties for the uicontrols:
@@ -786,7 +789,10 @@ function create_pcap_GUI() %<<<2
                         'toolbar',      'none', ...
                         'menubar',      'none', ...
                         'units',        'characters', ...
-                        'windowstyle',  'modal');
+                        'windowstyle',  'normal');
+    % Logically this subGUI window should be modal, but it interferes with open
+    % file dialog that is also modal but 'lesser modal'
+
     % Set size of the GUI without changing the initial position given by
     % operating system:
     pos = get(f_pcap, 'position');
@@ -968,7 +974,8 @@ end % function b_pcap_quant(~, ~)
 function b_pcap_convert_callback(~, ~) %<<<2
 % What happens when user selects button Convert pcap file
     global udata;    % structure with user input data
-    global f_main;  % main GUI figure handle
+    global f_main;   % main GUI figure handle
+    global f_pcap;   % subGUI figure handle
 
     % find tshark binary
     tsharkPath = get_tshark_binary_path();
@@ -1016,7 +1023,7 @@ function b_pcap_convert_callback(~, ~) %<<<2
     % Write all quantities to csv sheets:
     filenametomain = '';        % filename that will be put into main GUI data file input
     for j = 1:size(Data, 2)
-        ASDUnumber = floor((j-1)/8);
+        ASDUnumber = floor((j-1)/8) + 1;
         quantity = udata.CONST_pcap_quantities{rem(j, 8) + 1};
 
         [DIR, NAME, EXT] = fileparts(tmpPath);
@@ -1028,17 +1035,20 @@ function b_pcap_convert_callback(~, ~) %<<<2
         end
     end % for
 
+    % close message box:
     if ishandle(h_msgbox)
         close(h_msgbox);
     end
 
+    % message finished:
     msgbox(sprintf('pcap file was converted.\nFor selected MAC addresses, %d ASDU units were found. Each quantity (I0, I1, ..., U3) was saved into a separate .csv file. File for the U1 voltage will be preselected in the main window.', ...
         ASDUnumber));
 
+    % add U1 file to the main GUI:
     set(find_h_by_tag('t_datafile', f_main), 'string', filenametomain);
 
     % close subGUI
-    close(gcf())
+    close(f_pcap)
 end % function b_pcap_convert_callback(~, ~)
 
 function b_pcap_help_callback(~, ~) %<<<2
@@ -1356,5 +1366,260 @@ function present_results(DOmain, DOspectrum, DI, y, udata) %<<<2
     saveas(fph, [fullfile(DIR, NAME) '-phase.fig']);
     saveas(fph, [fullfile(DIR, NAME) '-phase.png']);
 end % function present_results
+
+%% functions for pcap converting %<<<1
+
+function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMac, destMac, tsharkPath, skip_if_exist, verbose) %<<<1
+% Read sampled values from pcap file for selected source and destination.
+% Returns Time vector, Counters matrix with numner of collumns equal to the
+% number of ASDUs (Application Specific Data Unit), Data with current and
+% voltage collumns for each ASDU (I0, I1, I2, I3, U0, U1, U2, U3), and file path
+% of the temporary file with all data as exported by tshark.
+
+    % Comment on functionality ---------------------- %<<<2
+    % One could process output of tshark command directly without using
+    % temporary files, unfortunately a large output can fail, mostly when
+    % done second time. Therefore temporary files are always used.
+
+    % Initialization ---------------------- %<<<2
+    % skip_if_exist variable is not mandatory:
+    if not(exist('skip_if_exist', 'var'))
+        skip_if_exist = 0;
+    end
+    skip_if_exist = not(not(skip_if_exist));    % ensure logical
+
+    % verbose variable is not mandatory:
+    if not(exist('verbose', 'var'))
+        verbose = 0;
+    end
+    verbose = not(not(verbose));    % ensure logical
+
+    % Create a name of the temporary file
+    tmpFile = sprintf('%s.data_src_%s_dst_%s.txt', ...
+        pcapPath, ...
+        strrep(sourceMac, ':', ''), ...
+        strrep(destMac, ':', ''));
+
+    % tshark data covnerting ---------------------- %<<<2
+    % check if temporary file with data already exist and if user wants to skip
+    % the tshark processing:
+    if or(not(exist(tmpFile, 'file')), not(skip_if_exist))
+        % Export data using tshark
+        cmd = sprintf('"%s" -r "%s" -Y "eth.type == 0x88ba" -Y "eth.src == %s " -Y "eth.dst == %s " -T fields -e frame.time_relative -e sv.smpCnt -e sv.meas_value > "%s"', ...
+        tsharkPath, ...
+        pcapPath, ...
+        sourceMac, ...
+        destMac, ...
+        tmpFile);
+        if verbose disp('Calling tshark to convert pcap file ...'), end
+        [status, output] = system(cmd);
+        if verbose disp('tshark finished converting pcap file.'), end
+        % output contains data in following format:
+        % Every single line is a single packet, with the following format:
+        %   "Time TAB Counter TAB MeasuredValue1,MeasuredValue1,...,MeasuredValue8 NEWLINE"
+        % where:
+        %   Time - frame.time_relative,
+        %   TAB - tab character,
+        %   Counter - a sample counter values (sv.smpCnt), that overflows at some
+        %       count and starts again from 0. Up to 8 counters can be here, that
+        %       represents up to 8 ASDU (Application Specific Data Unit) values in
+        %       this data line. Usually only one ASDU is present.
+        %   TAB - tab character,
+        %   MeasuredValue1,...,MeasuredValueN - a string of measured values,
+        %       (sv.meas_value) separated by commas. There is 8 emasured values [I0,
+        %       I1, I2, I3, V0, V1, V2, V3] for each ASDU, so for maximum of 8 ASDU
+        %       values there can be up to 64 measured values. Each measured value is
+        %       represented as 32-bit (4 bytes) signed integer (int32)
+        %   NEWLINE - dependent on the operating system.
+    end % if or()
+
+    % loading temporary file ---------------------- %<<<2
+    % from the first line of the temporary file, get the number of ASDUs and
+    % check that number of measured data is correct:
+    fid = fopen(tmpFile, 'r');
+    line = fgetl(fid);                      % get first line
+    fclose(fid);
+    C = strsplit(line, {'\t'});             % separate values to Time, Counter, and MeasuredValues
+    num_of_ASDUs = length(str2num(C{2}));   % number of sample counter values
+    all_meas_data = str2num(C{3});          % get all measured data of one packet
+    % check if number of ASDU is consistent with number of measured values:
+    if not(8*num_of_ASDUs == numel(all_meas_data))
+        error('Number of ASDUs (%d) is not consistent with number of measured values (%d). Number of measured values should be 8 times the number of ASDUs',...
+            num_of_ASDUs, ...
+            numel(all_meas_data));
+    end % end if
+
+    fid = fopen(tmpFile, 'r');
+    C = textscan(fid,'%f', 'Delimiter', {sprintf('\t'), ','}); % 19 seconds for 1.5 GB pcap file
+    fclose(fid);
+    Data = cell2mat(C);
+    clear C;
+    Data = reshape(Data, 1 + num_of_ASDUs + 8*num_of_ASDUs, [])';  % 1 is for time column
+    Time = Data(:, 1);        % time: frame.time_relative
+    Counters = Data(:, 1 + 1 : 1 + num_of_ASDUs);
+    Data(:, 1 : 1 + num_of_ASDUs) = [];
+
+    if verbose disp(['Number of ASDUs in the data is: ' num2str(num_of_ASDUs)]), end
+    if verbose disp(['Number of loaded packets is: ' num2str(size(Data, 1))]), end
+
+end % function
+
+function [sourceMacsCell, destMacsCell]= get_macs_from_pcap(pcapPath, tsharkPath, skip_if_exist, verbose) %<<<1
+% Scan pcap file for MAC addresses of sources and destinations using tshark.
+% Return MAC addresses as cell of strings. The MAC addresses are saved into
+% temporary files and can be retrieved again by setting skip_if_exist to
+% positive value. The reason is the tshark can take up to 5 minutes of scanning
+% for 1.5 GB long pcap file, and this has to be done twice for sources and
+% destinations.
+
+    % Initialization ---------------------- %<<<2
+    % skip_if_exist variable not mandatory:
+    if not(exist('skip_if_exist', 'var'))
+        skip_if_exist = 0;
+    end
+    skip_if_exist = not(not(skip_if_exist));    % ensure logical
+
+    % verbose variable not mandatory:
+    if not(exist('verbose', 'var'))
+        verbose = 0;
+    end
+    verbose = not(not(verbose));    % ensure logical
+
+    % Comment on functionality ---------------------- %<<<2
+    % One could process output of tshark command directly, as in following
+    % commented lines, uncfortunately such a large output can fail, mostly when
+    % done second time. Therefore temporary files are used.
+        % cmd = sprintf('"%s" -r "%s" -Y "eth.type == 0x88ba" -T fields -e eth.src > aaa.txt', ...
+        %     tsharkPath, ...
+        %     pcapPath);
+        % [status, output] = system(cmd);
+        % sourceMacsCell = strsplit(strtrim(output), sprintf('\n')); % parse output XXX this takes too long for 1.5 GB files - more than 5 minutes
+        % sourceMacsCell = unique(sourceMacsCell, 'stable');  % get only unique values and keep order
+
+    % Search for MACs ---------------------- %<<<2
+    % cycle for two targets: sources and destinations.
+    target = {'src', 'dst'};
+    targetlong = {'source', 'destination'};
+    macsCell = {};
+    for t = 1:numel(target)
+        % create name of temporary file:
+        tmpFile = [pcapPath '.' targetlong{t} '_MAC_addresses.txt'];
+
+        % check if temporary file with MAC addresses already exist and if user wants
+        % to skip tshark processing:
+        load_directly = 0;
+        if skip_if_exist
+            if exist(tmpFile, 'file')
+                load_directly = 1;
+            end
+        end
+
+        if load_directly
+            % temporary file already exist, load MAC addresses from the file.
+            fid = fopen(tmpFile, 'r');
+            macsCell{t} = textscan(fid, '%s');
+            fclose(fid);
+            macsCell{t} = unique(macsCell{t}{1}, 'stable');  % get only unique, keep order, just to be sure
+            if verbose disp(['Reading ' targetlong{t} ' unique MAC addresses from already existing temporary file finished.']), end
+        else
+            % Call tshark, write addresses to temporary file.
+            cmd = sprintf('"%s" -r "%s" -Y "eth.type == 0x88ba" -T fields -e eth.%s > "%s"', ...
+                tsharkPath, ...
+                pcapPath, ...
+                target{t}, ...
+                tmpFile); % this command can take e.g. 5 minutes for 1.5 GB file!
+            if verbose disp(['Calling tshark to read ' targetlong{t} ' MAC addresses ...']), end
+            [status, output] = system(cmd);
+            if verbose disp(['tshark finished reading all ' targetlong{t} ' MAC addresses.']), end
+
+            % load temporary file with MAC addresses
+            fid = fopen(tmpFile, 'r');
+            macsCell(t) = textscan(fid, '%s');
+            macsCell(t) = {unique(macsCell{t}, 'stable')};  % get only unique, keep order
+            fclose(fid);
+            if verbose disp(['Finding unique ' targetlong{t} ' MAC addresses finished.']), end
+
+            % write unique MAC addresses back to the temporary file for future
+            % use.
+            fid = fopen(tmpFile, 'w');
+            fprintf(fid, '%s\n', macsCell{t}{:});
+            fclose(fid);
+        end % if skip
+        if verbose
+            disp(['Following unique ' targetlong{t} ' MAC addresses obtained:'])
+            disp(macsCell{t})
+        end % if verbose
+    end % for t = 1:numel(target)
+
+    % create outputs ---------------------- %<<<2
+    sourceMacsCell = macsCell{1};
+    destMacsCell = macsCell{2};
+
+end % function
+
+function tsharkPath = get_tshark_binary_path(verbose) %<<<1
+% Finds path to the tshark binary and returns full path and name. Works on both
+% unix and windows systems.
+
+    % Initialization ---------------------- %<<<2
+    % verbose variable is not mandatory:
+    if not(exist('verbose', 'var'))
+        verbose = 0;
+    end
+    verbose = not(not(verbose));    % ensure logical
+
+    % Constants ---------------------- %<<<2
+    % binary of tshark in windows:
+    winTsharkBinaryFilename = 'tshark.exe';
+    % registry keys to search for Wireshark installation in windows:
+    winWiresharkRegisteryKeys = {
+        'HKLM\SOFTWARE\Wireshark', ...
+        'HKLM\SOFTWARE\WOW6432Node\Wireshark'
+    };
+
+    tsharkPath = '';  % Default to empty if not found
+
+    % Find tshark path  ---------------------- %<<<2
+    if isunix
+        % unix/linux case. Simply check if tshark binary is in PATH
+        [status, output] = system('which tshark');
+        if status == 0
+            output = strtrim(output);  % Remove trailing newline
+            % check if found path is really correct:
+            if exist(output, 'file') == 2
+                tsharkPath = output;
+            end % if exist
+        end % if status
+    else % isunix
+        % windows case, much more complex due to nonfunctioning/unused PATH. Register query must be done.
+        for i = 1:length(winWiresharkRegisteryKeys)
+            % Properly format registry query
+            cmd = sprintf('reg query "%s" /v InstallDir 2>NUL', winWiresharkRegisteryKeys{i});
+            % use command reg to query register if wireshark registry keys exist
+            [status, output] = system(cmd);
+
+            if status == 0
+                % Match "InstallDir    REG_SZ    C:\Path\To\Wireshark"
+                tokens = regexp(output, 'InstallDir\s+REG_SZ\s+([^\r\n]+)', 'tokens');
+                if ~isempty(tokens)
+                    installDir = strtrim(tokens{1}{1});
+                    possiblePath = fullfile(installDir, winTsharkBinaryFilename);
+                    % check if binary file really exist
+                    if exist(possiblePath, 'file') == 2
+                        tsharkPath = possiblePath;
+                        return;
+                    end % if exist
+                end % if ~isempty
+            end % if status
+        end % for
+    end % if isunix
+
+    if isempty(tsharkPath)
+        disp('tshark.exe not found in registry.');
+    else
+        if verbose disp(sprintf('Found tshark.exe at: %s\n', tsharkPath)), end
+    end % if isempty
+
+end % function
 
 % vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=matlab textwidth=80 tabstop=4 shiftwidth=4
