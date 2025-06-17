@@ -5,7 +5,7 @@ function proc_SAMMU_waveform_gui() %<<<1
     global udata;    % structure with user input data
 
     % Define constants
-    GUIname = 'proc_SAMMU_waveform_gui';
+    GUIname = 'process SAMMU waveform';
     udata.CONST_available_algorithms = {'PSFE>SplineResample>FFT', 'PSFE>resampleSVstream>FFT'}; % Must be a constant - if changed, change also function calculate()!
     udata.CONST_srmethod = {'keepN', 'minimizefs', 'poweroftwo'}; % if changed, change also function calculate()!
     udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
@@ -232,7 +232,7 @@ function make_gui(welcome_message) %<<<2
     uig.col_step = 28; % grid size of columns of ui controls
     uig.col_off = 1; % offset of columns of ui controls
     uig.total_width = 113; % total width of the gui window
-    uig.total_height = 20; % total height of the gui window
+    uig.total_height = 23; % total height of the gui window
     uig.row = 1; % index of row of ui controls
     uig.col = 1; % index of column of ui controls
 
@@ -328,7 +328,7 @@ function make_gui(welcome_message) %<<<2
                         'tooltipstring', sprintf('Write here a time in seconds. The data will be split into sections of this length.\nResults will be calculated for every section independently.\nIf value is set to zero, no splitting will be done and whole data will be calculated as one record.'), ...
                         'position',  uigrid_position(uig));
 
-    uig.row = uig.row + 1; % --------------- row 2 sampling f and fest
+    uig.row = uig.row + 1; % --------------- row 4 sampling f and fest
     uig.col = 1;
     % label for input sampling frequency
     t_fs = uicontrol(f_main, ...
@@ -364,7 +364,7 @@ function make_gui(welcome_message) %<<<2
                         'tooltipstring', sprintf('Write here a number with an estimate of the signal frequency, that is used in the calculation algorithms.\nE.g. for power measurement 50 Hz is sufficient estimate.'), ...
                         'position',  uigrid_position(uig));
 
-    uig.row = uig.row + 1; % --------------- row 3 splineresample relative
+    uig.row = uig.row + 1; % --------------- row 5 splineresample relative
     uig.col = 1;
     % label for input splineresample method
     t_srmethod = uicontrol(f_main, ...
@@ -403,7 +403,7 @@ function make_gui(welcome_message) %<<<2
                         'tooltipstring', sprintf('Write here a value of denominator to reduce resampled bandwidth.\nThis is relevant only for SplineResample algorithm. For other algorithms, this value is ignored.'), ...
                         'position',  uigrid_position(uig));
 
-    uig.row = uig.row + 0; % --------------- row 3 again resamplingSVstream relative
+    uig.row = uig.row + 0; % --------------- row 5 again resamplingSVstream relative
     uig.col = 1;
     t_rsmaxaerr = uicontrol(f_main, ...
                         'tag',      't_rsmaxaerr', ...
@@ -439,7 +439,7 @@ function make_gui(welcome_message) %<<<2
                         'tooltipstring', sprintf('Write here a value of the required number of samples per period of the signal.\nThis is relevant only for resamplingSVstream algorithm. For other algorithms, this value is ignored.'), ...
                         'position',  uigrid_position(uig));
 
-    uig.row = uig.row + 1; % --------------- row 5 calc+help
+    uig.row = uig.row + 1; % --------------- row 6 calc+help
     uig.col = 1;
     % button Calculate
     b_calc = uicontrol (f_main, ...
@@ -459,6 +459,17 @@ function make_gui(welcome_message) %<<<2
                         'units',     'characters', ...
                         'tooltipstring', sprintf('Show help in web browser.'), ...
                         'position',  uigrid_position(uig));
+    uig.row = uig.row + 1; % --------------- row 7 acknowledgement
+    uig.col = 1;
+    t_ack = uicontrol(f_main, ...
+                        'tag',      't_ack', ...
+                        'Style',    'text', ...
+                        'string',   sprintf('The project 21NRM02 Digital-IT has received funding from the European Partnership on Metrology,\nco-financed from the European Union’s Horizon Europe Research and Innovation Programme and by the Participating States.'), ...
+                        'units',    'characters', ...
+                        'fontsize', 8, ...
+                        'horizontalalignment', 'left', ...
+                        'position', uigrid_position(uig, 3));
+    uig.col = uig.col + 3;
 
     % show welcome message about successful install if required:
     if welcome_message
@@ -752,7 +763,7 @@ function create_pcap_GUI() %<<<2
     global udata;    % structure with user input data
 
     % Define constants
-    pcapGUIname = 'pcap_gui';
+    pcapGUIname = 'pcap converter';
     udata.pcap_datafile = '50Hz.pcapng'; % pcap file with sampled data
     udata.CONST_pcap_quantities = {'I0', 'I1', 'I2', 'I3', 'U0', 'U1', 'U2', 'U3'};
 
@@ -1026,9 +1037,8 @@ function b_pcap_convert_callback(~, ~) %<<<2
 
     set(find_h_by_tag('t_datafile', f_main), 'string', filenametomain);
 
+    % close subGUI
     close(gcf())
-
-    % TODO XXXX write csv file into main gui
 end % function b_pcap_convert_callback(~, ~)
 
 function b_pcap_help_callback(~, ~) %<<<2
