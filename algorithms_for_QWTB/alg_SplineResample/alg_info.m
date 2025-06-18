@@ -4,7 +4,7 @@ function alginfo = alg_info() %<<<1
 % See also qwtb
 
 alginfo.id = 'SplineResample';
-alginfo.name = 'resampling name';
+alginfo.name = 'Spline Resampling';
 alginfo.desc = 'Splines are used to resample sampled data to a new sampling frequency.';
 alginfo.citation = 'no citation';
 alginfo.remarks = 'no remark';
@@ -53,13 +53,13 @@ alginfo.inputs(7).optional = 1;
 alginfo.inputs(7).parameter = 1;
 
 alginfo.outputs(1).name = 'fs';
-alginfo.outputs(1).desc = 'Sampling frequency after resampling, equal to fsest.';
+alginfo.outputs(1).desc = 'Sampling frequency after resampling, equal to fest.';
 
 alginfo.outputs(2).name = 'Ts';
-alginfo.outputs(2).desc = 'Sampling period after resampling, equal to fsest.';
+alginfo.outputs(2).desc = 'Sampling period after resampling, equal to 1/fest.';
 
 alginfo.outputs(3).name = 't';
-alginfo.outputs(3).desc = 'Time series after resampling, equal to test';
+alginfo.outputs(3).desc = 'Time series after resampling, based on fest.';
 
 alginfo.outputs(4).name = 'y';
 alginfo.outputs(4).desc = 'Resampled samples';
