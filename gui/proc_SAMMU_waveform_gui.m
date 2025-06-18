@@ -5,9 +5,14 @@ function proc_SAMMU_waveform_gui() %<<<1
     global udata;    % structure with user input data
 
     % Define constants
-    GUIname = 'process SAMMU waveform';
+    % (no space allowed in the variable because matlab will fail!)
+    GUIname = 'process_SAMMU_waveform';
     udata.CONST_available_algorithms = {'PSFE>SplineResample>FFT', 'PSFE>resampleSVstream>FFT'}; % Must be a constant - if changed, change also function calculate()!
     udata.CONST_srmethod = {'keepN', 'minimizefs', 'poweroftwo'}; % if changed, change also function calculate()!
+    % because Matlab cannot create a popup list with empty input, something has
+    % to be instead of MAC addresses in subGUI until the MAC addresses are red
+    % from the pcap file:
+    udata.CONST_noMACinput = {'no MAC selected'};
     % this is order in which quantities are in pcap files:
     udata.CONST_pcap_quantities = {'I0', 'I1', 'I2', 'I3', 'U0', 'U1', 'U2', 'U3'};
     udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
@@ -767,7 +772,8 @@ function create_pcap_GUI() %<<<2
     global f_pcap;   % subGUI figure handle
 
     % Define constants
-    pcapGUIname = 'pcap converter';
+    % (no space allowed in the variable because matlab will fail!)
+    pcapGUIname = 'pcap_converter';
     udata.pcap_datafile = '50Hz.pcapng'; % pcap file with sampled data
 
     %% Define grid for uicontrols and gui dimensions %<<<3
@@ -848,7 +854,7 @@ function create_pcap_GUI() %<<<2
     p_pcap_sourcemac = uicontrol(f_pcap, ...
                         'tag',      'p_pcap_sourcemac', ...
                         'Style',    'popupmenu', ...
-                        'string',   '', ...
+                        'string',   udata.CONST_noMACinput, ...
                         'callback', @b_pcap_source_callback, ...
                         'value',    1, ...
                         'units',    'characters', ...
@@ -867,7 +873,7 @@ function create_pcap_GUI() %<<<2
     p_pcap_destmac = uicontrol(f_pcap, ...
                         'tag',      'p_pcap_destmac', ...
                         'Style',    'popupmenu', ...
-                        'string',   '', ...
+                        'string',   udata.CONST_noMACinput, ...
                         'callback', @b_pcap_dest_callback, ...
                         'value',    1, ...
                         'units',    'characters', ...
@@ -895,7 +901,12 @@ function create_pcap_GUI() %<<<2
 
     % finalize subGUI window %<<<3
     % change color of the figure background to distinct from main GUI window
-    set(f_pcap, 'color', '#FFF5DA');
+
+    % for matlab version R2018b or older, one have to convert hex color code to 1-by-3 RGB array:
+    % Convert color code to 1-by-3 RGB array (0~1 each)
+    lightyellowstr = '#FFF5DA';
+    lightyellow = sscanf(lightyellowstr(2:end),'%2x%2x%2x',[1 3])./255;
+    set(f_pcap, 'color', lightyellow);
     % force f_pcap window to be shown on top of main GUI figure
     figure(f_pcap)
 
@@ -947,15 +958,17 @@ function b_pcap_readmac_callback(~, ~) %<<<2
         close(h_msgbox);
     end
     if isempty(sourceMacsCell)
-        msgbox('Source MAC addresses were not found.')
+        msgbox('Source MAC addresses were not found in the selected file.')
+    else
+        % fill in MAC addresses into listboxes
+        set(find_h_by_tag('p_pcap_sourcemac'), 'string', sourceMacsCell)
     end
     if isempty(destMacsCell)
-        msgbox('Destination MAC addresses were not found.')
+        msgbox('Destination MAC addresses were not found in the selected file.')
+    else
+        % fill in MAC addresses into listboxes
+        set(find_h_by_tag('p_pcap_destmac'), 'string', destMacsCell)
     end
-
-    % fill in MAC addresses into listboxes
-    set(find_h_by_tag('p_pcap_sourcemac'), 'string', sourceMacsCell)
-    set(find_h_by_tag('p_pcap_destmac'), 'string', destMacsCell)
 
 end % function b_pcap_readmac_callback(~, ~)
 
@@ -966,10 +979,6 @@ end % function b_pcap_souce_callback(~, ~)
 function b_pcap_dest_callback(~, ~) %<<<2
 % What happens when user select destination MAC address
 end % function b_pcap_souce_callback(~, ~)
-
-function b_pcap_quant(~, ~) %<<<2
-% What happens when user select a quantity
-end % function b_pcap_quant(~, ~)
 
 function b_pcap_convert_callback(~, ~) %<<<2
 % What happens when user selects button Convert pcap file
@@ -1004,8 +1013,9 @@ function b_pcap_convert_callback(~, ~) %<<<2
     end
 
     % check if MACs are not empty
-    if or(isempty(sourceMAC), isempty(destMAC))
-        msgbox('The source or destination MAC address is empty! You have first to "Read MAC addresses from pcap file".')
+    if or(strcmp(sourceMAC{1}, udata.CONST_noMACinput), ...
+          strcmp(destMAC{1}, udata.CONST_noMACinput))
+        msgbox('The source or destination MAC address is not selected! You have first to "Read MAC addresses from pcap file".')
         return
     end
 
@@ -1016,7 +1026,7 @@ function b_pcap_convert_callback(~, ~) %<<<2
     h_msgbox = msgbox(sprintf('Running tshark to convert pcap format into csv, please wait.\nThis can take many minutes for pcap files of GB size!\nThis message will close when finished.'));
     [Time, Counters, Data, tmpPath] = get_data_from_pcap(pcapPath, sourceMAC{1}, destMAC{1}, tsharkPath, 1, 1);
     if isempty(Time)
-        msgbox('Conversion failed.')
+        msgbox('Conversion failed. Data was not found in the selected file.')
         return
     end
 
@@ -1284,7 +1294,7 @@ function [main, ResampledSignalSpectrum] = calculate(DI, algid) %<<<2
         ResampledSignal = qwtb('SplineResample', DI);
     elseif strcmp(algid, 'PSFE>resampleSVstream>FFT')
         ResampledSignal = qwtb('resamplingSVstream', DI);
-    elseif
+    else
         error('proc_SAMMU_waveform_gui: mismatch in selected algorithm. Please ask author to fix this.')
     end
 
