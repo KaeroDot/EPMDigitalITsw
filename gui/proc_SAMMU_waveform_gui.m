@@ -7,7 +7,7 @@ function proc_SAMMU_waveform_gui() %<<<1
     % Define constants
     % (no space allowed in the variable because matlab will fail!)
     GUIname = 'process_SAMMU_waveform';
-    udata.CONST_available_algorithms = {'PSFE>SplineResample>FFT', 'PSFE>resampleSVstream>FFT'}; % Must be a constant - if changed, change also function calculate()!
+    udata.CONST_available_algorithms = {'PSFE>SplineResample>FFT', 'PSFE>resamplingSVstream>FFT'}; % Must be a constant - if changed, change also function calculate()!
     udata.CONST_srmethod = {'keepN', 'minimizefs', 'poweroftwo'}; % if changed, change also function calculate()!
     % because Matlab cannot create a popup list with empty input, something has
     % to be instead of MAC addresses in subGUI until the MAC addresses are red
@@ -49,6 +49,10 @@ end % function qwtb_in_path
 function q = digit_algs_in_qwtb %<<<2
     algs = qwtb();
     digit_alg = 'SplineResample';
+    q = any(strcmp({algs.id}, digit_alg));
+    digit_alg = 'resamplingSVstream';
+    q = any(strcmp({algs.id}, digit_alg));
+    digit_alg = 'windowedRMS';
     q = any(strcmp({algs.id}, digit_alg));
 end % function qwtb_in_path
 
@@ -175,6 +179,8 @@ function download_Digital_IT() %<<<2
         % 'path/dir'->'path2', because it only copies all files in dir to a
         % path2. One must copy 'path/dir'->'path2/dir')
         copyfile(fullfile(digit_path, 'alg_SplineResample'), fullfile(get_qwtb_path_from_pref(), 'alg_SplineResample'));
+        copyfile(fullfile(digit_path, 'alg_resamplingSVstream'), fullfile(get_qwtb_path_from_pref(), 'alg_resamplingSVstream'));
+        copyfile(fullfile(digit_path, 'alg_windowedRMS'), fullfile(get_qwtb_path_from_pref(), 'alg_windowedRMS'));
         if not(digit_algs_in_qwtb)
             error('DigitalIT algorithms not found in QWTB.')
         end
@@ -1287,12 +1293,22 @@ function [main, ResampledSignalSpectrum] = calculate(DI, algid) %<<<2
         % XXX disable qwtb checks for all loops but first one
 
     % First make proper estimate using the PSFE
+    tmp = DI.fest.v;
     FrequencyEstimate = qwtb('PSFE', DI);
-    DI.fest.v = FrequencyEstimate.f.v;
+    % if the input signal is noise (that happens for U0, I0), than the PSFE will
+    % return 0, and this cause error. So the estimate is set back to the user's
+    % input
+    if FrequencyEstimate.f.v == 0
+        DI.fest.v = tmp;
+        DI.fest.v
+    else
+        DI.fest.v = FrequencyEstimate.f.v;
+        DI.fest.v
+    end
 
-    if strcmp(algid, 'PSFE>SplineResample>FFT')
+    if strcmp(algid, 'PSFE>SplineResample>FFT')             % not good, should be some constant instead of PSFE>>
         ResampledSignal = qwtb('SplineResample', DI);
-    elseif strcmp(algid, 'PSFE>resampleSVstream>FFT')
+    elseif strcmp(algid, 'PSFE>resamplingSVstream>FFT')             % not good, should be some constant instead of PSFE>>
         ResampledSignal = qwtb('resamplingSVstream', DI);
     else
         error('proc_SAMMU_waveform_gui: mismatch in selected algorithm. Please ask author to fix this.')
