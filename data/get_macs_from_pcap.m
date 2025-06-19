@@ -1,3 +1,4 @@
+function [sourceMacsCell, destMacsCell]= get_macs_from_pcap(pcapPath, tsharkPath, skip_if_exist, verbose) %<<<1
 % Scan pcap file for MAC addresses of sources and destinations using tshark.
 % Return MAC addresses as cell of strings. The MAC addresses are saved into
 % temporary files and can be retrieved again by setting skip_if_exist to
@@ -5,8 +6,7 @@
 % for 1.5 GB long pcap file, and this has to be done twice for sources and
 % destinations.
 
-function [sourceMacsCell, destMacsCell]= get_macs_from_pcap(pcapPath, tsharkPath, skip_if_exist, verbose)
-    % Initialization ---------------------- %<<<1
+    % Initialization ---------------------- %<<<2
     % skip_if_exist variable not mandatory:
     if not(exist('skip_if_exist', 'var'))
         skip_if_exist = 0;
@@ -19,7 +19,7 @@ function [sourceMacsCell, destMacsCell]= get_macs_from_pcap(pcapPath, tsharkPath
     end
     verbose = not(not(verbose));    % ensure logical
 
-    % Comment on functionality ---------------------- %<<<1
+    % Comment on functionality ---------------------- %<<<2
     % One could process output of tshark command directly, as in following
     % commented lines, uncfortunately such a large output can fail, mostly when
     % done second time. Therefore temporary files are used.
@@ -30,6 +30,7 @@ function [sourceMacsCell, destMacsCell]= get_macs_from_pcap(pcapPath, tsharkPath
         % sourceMacsCell = strsplit(strtrim(output), sprintf('\n')); % parse output XXX this takes too long for 1.5 GB files - more than 5 minutes
         % sourceMacsCell = unique(sourceMacsCell, 'stable');  % get only unique values and keep order
 
+    % Search for MACs ---------------------- %<<<2
     % cycle for two targets: sources and destinations.
     target = {'src', 'dst'};
     targetlong = {'source', 'destination'};
@@ -84,7 +85,7 @@ function [sourceMacsCell, destMacsCell]= get_macs_from_pcap(pcapPath, tsharkPath
         end % if verbose
     end % for t = 1:numel(target)
 
-    % create outputs:
+    % create outputs ---------------------- %<<<2
     sourceMacsCell = macsCell{1};
     destMacsCell = macsCell{2};
 

@@ -1,16 +1,16 @@
+function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMac, destMac, tsharkPath, skip_if_exist, verbose) %<<<1
 % Read sampled values from pcap file for selected source and destination.
 % Returns Time vector, Counters matrix with numner of collumns equal to the
 % number of ASDUs (Application Specific Data Unit), Data with current and
 % voltage collumns for each ASDU (I0, I1, I2, I3, U0, U1, U2, U3), and file path
 % of the temporary file with all data as exported by tshark.
 
-function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMac, destMac, tsharkPath, skip_if_exist, verbose)
-    % Comment on functionality ---------------------- %<<<1
+    % Comment on functionality ---------------------- %<<<2
     % One could process output of tshark command directly without using
     % temporary files, unfortunately a large output can fail, mostly when
     % done second time. Therefore temporary files are always used.
 
-    % Initialization ---------------------- %<<<1
+    % Initialization ---------------------- %<<<2
     % skip_if_exist variable is not mandatory:
     if not(exist('skip_if_exist', 'var'))
         skip_if_exist = 0;
@@ -23,16 +23,13 @@ function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMa
     end
     verbose = not(not(verbose));    % ensure logical
 
-    % temp file jako mat
-    % soubor? XXXXXXXXXXXXXXXXXX
-
     % Create a name of the temporary file
     tmpFile = sprintf('%s.data_src_%s_dst_%s.txt', ...
         pcapPath, ...
         strrep(sourceMac, ':', ''), ...
         strrep(destMac, ':', ''));
 
-    % tshark data covnerting ---------------------- %<<<1
+    % tshark data covnerting ---------------------- %<<<2
     % check if temporary file with data already exist and if user wants to skip
     % the tshark processing:
     if or(not(exist(tmpFile, 'file')), not(skip_if_exist))
@@ -65,7 +62,7 @@ function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMa
         %   NEWLINE - dependent on the operating system.
     end % if or()
 
-    % loading temporary file ---------------------- %<<<1
+    % loading temporary file ---------------------- %<<<2
     % from the first line of the temporary file, get the number of ASDUs and
     % check that number of measured data is correct:
     fid = fopen(tmpFile, 'r');
@@ -93,8 +90,6 @@ function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMa
 
     if verbose disp(['Number of ASDUs in the data is: ' num2str(num_of_ASDUs)]), end
     if verbose disp(['Number of loaded packets is: ' num2str(size(Data, 1))]), end
-
-    % a rozdelit na jednotlive ASDU a cas atd. XXXXXXXXXXXXXXXXXX
 
 end % function
 

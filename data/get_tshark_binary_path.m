@@ -1,15 +1,15 @@
+function tsharkPath = get_tshark_binary_path(verbose) %<<<1
 % Finds path to the tshark binary and returns full path and name. Works on both
 % unix and windows systems.
 
-function tsharkPath = get_tshark_binary_path(verbose)
-    % Initialization ---------------------- %<<<1
+    % Initialization ---------------------- %<<<2
     % verbose variable is not mandatory:
     if not(exist('verbose', 'var'))
         verbose = 0;
     end
     verbose = not(not(verbose));    % ensure logical
 
-    % Constants ---------------------- %<<<1
+    % Constants ---------------------- %<<<2
     % binary of tshark in windows:
     winTsharkBinaryFilename = 'tshark.exe';
     % registry keys to search for Wireshark installation in windows:
@@ -20,7 +20,7 @@ function tsharkPath = get_tshark_binary_path(verbose)
 
     tsharkPath = '';  % Default to empty if not found
 
-    % Find tshark path  ---------------------- %<<<1
+    % Find tshark path  ---------------------- %<<<2
     if isunix
         % unix/linux case. Simply check if tshark binary is in PATH
         [status, output] = system('which tshark');
