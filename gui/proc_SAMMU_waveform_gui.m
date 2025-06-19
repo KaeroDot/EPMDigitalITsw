@@ -1036,20 +1036,26 @@ function b_pcap_convert_callback(~, ~) %<<<2
         return
     end
 
-    % Write all quantities to csv sheets:
+    % Write data to to csv sheets, one ASDU per csv file.
     filenametomain = '';        % filename that will be put into main GUI data file input
-    for j = 1:size(Data, 2)
+    chunkSize = 8;  % 8 quantities I0...U3
+    nCols = size(Data, 2);
+    for j = 1 : chunkSize : nCols
         ASDUnumber = floor((j-1)/8) + 1;
-        quantity = udata.CONST_pcap_quantities{rem(j, 8) + 1};
+        cols = j : min(j+chunkSize-1, nCols);
+        if numel(cols) ~= 8
+            warning('Number of sampled quantities in the pcap file is not divisible by 8, and that is strange. Each ASDU should contian 8 quantieis: I0, I1, I2, I3, U0, U1, U2, U3.')
+        end
+        chunk = Data(:, cols);
 
         [DIR, NAME, EXT] = fileparts(tmpPath);
         fn = fullfile(DIR, NAME);
-        fn = [fn '.ASDU_' num2str(ASDUnumber) '_' quantity '.csv'];
-        dlmwrite(fn, Data(:, j));
-        if strcmp(quantity, 'U1')
+        fn = [fn '.ASDU_' num2str(ASDUnumber) '.csv'];
+        dlmwrite(fn, chunk);
+        if j == 1
             filenametomain = fn;
         end
-    end % for
+    end
 
     % close message box:
     if ishandle(h_msgbox)
@@ -1057,10 +1063,10 @@ function b_pcap_convert_callback(~, ~) %<<<2
     end
 
     % message finished:
-    msgbox(sprintf('pcap file was converted.\nFor selected MAC addresses, %d ASDU units were found. Each quantity (I0, I1, ..., U3) was saved into a separate .csv file. File for the U1 voltage will be preselected in the main window.', ...
+    msgbox(sprintf('pcap file was converted.\nFor selected MAC addresses, %d ASDU units were found.\nEach quantity (I0, I1, ..., U3) was saved as columns into a .csv file.\nFile for the first ASDU will be preselected in the main window.', ...
         ASDUnumber));
 
-    % add U1 file to the main GUI:
+    % set first csv file to the main GUI:
     set(find_h_by_tag('t_datafile', f_main), 'string', filenametomain);
 
     % close subGUI
@@ -1441,7 +1447,7 @@ function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMa
         strrep(sourceMac, ':', ''), ...
         strrep(destMac, ':', ''));
 
-    % tshark data covnerting ---------------------- %<<<2
+    % tshark data converting ---------------------- %<<<2
     % check if temporary file with data already exist and if user wants to skip
     % the tshark processing:
     if or(not(exist(tmpFile, 'file')), not(skip_if_exist))
