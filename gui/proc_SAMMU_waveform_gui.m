@@ -15,8 +15,13 @@ function proc_SAMMU_waveform_gui() %<<<1
     udata.CONST_noMACinput = {'no MAC selected'};
     % this is order in which quantities are in pcap files:
     udata.CONST_pcap_quantities = {'I0', 'I1', 'I2', 'I3', 'U0', 'U1', 'U2', 'U3'};
-    udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
+
+    % Variables for values of input fields, used to transfer data between
+    % functions or to set default values (default values are loaded from
+    % settings or set in get_udata_from_pref())
+    % main gui:
     udata.datafile = ''; % file with sampled data (default value see get_udata_from_pref)
+    udata.alg = ''; % selected algorithm id (default value see get_udata_from_pref)
     udata.split = ''; % data split period (default value see get_udata_from_pref)
     udata.fs = ''; % sampling frequency (default value see get_udata_from_pref)
     udata.fest = ''; % signal frequency estimate (default value see get_udata_from_pref)
@@ -24,6 +29,8 @@ function proc_SAMMU_waveform_gui() %<<<1
     udata.srd = ''; % SplineResample denominator (default value see get_udata_from_pref)
     udata.rsmaxaerr = ''; % resamplingSVstream maximum relative amplitude error (default value see get_udata_from_pref)
     udata.rsspp = ''; % resamplingSVstream samples per period (default value see get_udata_from_pref)
+    % pcap gui:
+    udata.pcap_datafile = ''; % pcap file to be converted
 
     % Ensure system is working
     % ensure qwtb path
@@ -601,6 +608,9 @@ function get_udata_from_pref() %<<<2
     if not(isnumeric(udata.rsspp))
         udata.rsspp = 256;
     end
+    if isempty(udata.pcap_datafile)
+        udata.pcap_datafile = 'E_pcap.pcapng';
+    end
 end % function
 
 function b_datafile_callback(~, ~) %<<<2
@@ -780,7 +790,6 @@ function create_pcap_GUI() %<<<2
     % Define constants
     % (no space allowed in the variable because matlab will fail!)
     pcapGUIname = 'pcap_converter';
-    udata.pcap_datafile = '50Hz.pcapng'; % pcap file with sampled data
 
     %% Define grid for uicontrols and gui dimensions %<<<3
     % grid properties for the uicontrols:
@@ -1001,7 +1010,7 @@ function b_pcap_convert_callback(~, ~) %<<<2
     % get pcap file name and check if exist
     pcapPath = get(find_h_by_tag('t_pcap_datafile'), 'string');
     if not(exist(pcapPath, 'file'))
-        msgbox(['The filename `' datafile '` does not exist!'], ...
+        msgbox(['The filename `' pcapPath '` does not exist!'], ...
                'Input error', ...
                'modal');
         return
@@ -1026,6 +1035,7 @@ function b_pcap_convert_callback(~, ~) %<<<2
     end
 
     % All ok, save gui setup
+    udata.pcap_datafile = pcapPath;
     set_udata_to_pref();
 
     % run conversion using tshark
