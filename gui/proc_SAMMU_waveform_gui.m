@@ -581,7 +581,7 @@ function get_udata_from_pref() %<<<2
         udata.alg = udata.CONST_available_algorithms{1};
     end
     if isempty(udata.datafile)
-        udata.datafile = 'testdata_simple_csv_fs=4000_f=49.9-50.csv';
+        udata.datafile = 'E_csv_simulated_ROCOF_fs=4000_f=49.9-50.csv';
     end
     if not(isnumeric(udata.split))
         udata.split = 1;
@@ -1087,7 +1087,6 @@ function b_pcap_help_callback(~, ~) %<<<2
 % What happens when button Help is pressed
 % open web page, hardcoded
     web('https://github.com/KaeroDot/EPMDigitalITsw/blob/main/gui/proc_SAMMU_waveform_gui_help.md', '-browser')
-    % XXX fix to proper section of the help
 end % function b_pcap_help_callback(~, ~)
 
 %% functions for data processing %<<<1
@@ -1426,12 +1425,14 @@ end % function present_results
 
 % These functions are simply copied from directory data/ in this repository
 % If fixing, fix also the source!
+
 function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMac, destMac, tsharkPath, skip_if_exist, verbose) %<<<1
 % Read sampled values from pcap file for selected source and destination.
-% Returns Time vector, Counters matrix with numner of collumns equal to the
-% number of ASDUs (Application Specific Data Unit), Data with current and
-% voltage collumns for each ASDU (I0, I1, I2, I3, U0, U1, U2, U3), and file path
-% of the temporary file with all data as exported by tshark.
+% Returns Time vector (that is not a real time of a sample!), Counters matrix
+% with number of collumns equal to the number of ASDUs (Application Specific
+% Data Unit), Data with current and voltage collumns for each ASDU (typically
+% I1, I2, I3, In, U1, U2, U3, Un), and file path of the temporary file with all
+% data as exported by tshark.
 
     % Comment on functionality ---------------------- %<<<2
     % One could process output of tshark command directly without using
@@ -1457,7 +1458,7 @@ function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMa
         strrep(sourceMac, ':', ''), ...
         strrep(destMac, ':', ''));
 
-    % tshark data converting ---------------------- %<<<2
+    % tshark data covnerting ---------------------- %<<<2
     % check if temporary file with data already exist and if user wants to skip
     % the tshark processing:
     if or(not(exist(tmpFile, 'file')), not(skip_if_exist))
@@ -1473,20 +1474,24 @@ function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMa
         if verbose disp('tshark finished converting pcap file.'), end
         % output contains data in following format:
         % Every single line is a single packet, with the following format:
-        %   "Time TAB Counter TAB MeasuredValue1,MeasuredValue1,...,MeasuredValue8 NEWLINE"
+        %   "Time TAB Counter TAB MeasuredValue1,MeasuredValue2,...,MeasuredValueN NEWLINE"
         % where:
-        %   Time - frame.time_relative,
+        %   Time - frame.time_relative, NOT A REAL TIME OF A SAMPLE!
         %   TAB - tab character,
         %   Counter - a sample counter values (sv.smpCnt), that overflows at some
         %       count and starts again from 0. Up to 8 counters can be here, that
         %       represents up to 8 ASDU (Application Specific Data Unit) values in
         %       this data line. Usually only one ASDU is present.
         %   TAB - tab character,
-        %   MeasuredValue1,...,MeasuredValueN - a string of measured values,
-        %       (sv.meas_value) separated by commas. There is 8 emasured values [I0,
-        %       I1, I2, I3, V0, V1, V2, V3] for each ASDU, so for maximum of 8 ASDU
-        %       values there can be up to 64 measured values. Each measured value is
-        %       represented as 32-bit (4 bytes) signed integer (int32)
+        %   MeasuredValue1,...,MeasuredValueN - a string of measured
+        %   values-quantities (sv.meas_value) separated by commas.
+        %   Usually they are I1, I2, I3, In, U1, U2, U3, Un for each ASDU,
+        %   maximally 8 ASDUs, so maximally 64 measured values. This order comes
+        %   from IEC 61850-9-2LE, but IEC 61869-9 allows for varying composition
+        %   of signals in the frames/ASDUs. One can expect to start seeing just
+        %   one quantity in a stream, for example for a CT or VT, which
+        %   digitizes one signal only. Each measured value is represented as
+        %   32-bit (4 bytes) signed integer (int32).
         %   NEWLINE - dependent on the operating system.
     end % if or()
 
@@ -1498,25 +1503,25 @@ function [Time, Counters, Data, tmpFile] = get_data_from_pcap(pcapPath, sourceMa
     fclose(fid);
     C = strsplit(line, {'\t'});             % separate values to Time, Counter, and MeasuredValues
     num_of_ASDUs = length(str2num(C{2}));   % number of sample counter values
-    all_meas_data = str2num(C{3});          % get all measured data of one packet
-    % check if number of ASDU is consistent with number of measured values:
-    if not(8*num_of_ASDUs == numel(all_meas_data))
-        error('Number of ASDUs (%d) is not consistent with number of measured values (%d). Number of measured values should be 8 times the number of ASDUs',...
-            num_of_ASDUs, ...
-            numel(all_meas_data));
-    end % end if
+    quantities = numel(str2num(C{3}));      % get number of measured values-quantities in one packet
 
     fid = fopen(tmpFile, 'r');
     C = textscan(fid,'%f', 'Delimiter', {sprintf('\t'), ','}); % 19 seconds for 1.5 GB pcap file
     fclose(fid);
     Data = cell2mat(C);
     clear C;
-    Data = reshape(Data, 1 + num_of_ASDUs + 8*num_of_ASDUs, [])';  % 1 is for time column
+    Data = reshape(Data, 1 + num_of_ASDUs + quantities, [])';  % 1 is for time column
     Time = Data(:, 1);        % time: frame.time_relative
     Counters = Data(:, 1 + 1 : 1 + num_of_ASDUs);
     Data(:, 1 : 1 + num_of_ASDUs) = [];
 
+    % Multiply by 1000 to get real values. Not sure why tshark export multiplies
+    % by 1000, while Wireshark manual export writes down real floating point
+    % number.
+    Data = Data./1e3;
+
     if verbose disp(['Number of ASDUs in the data is: ' num2str(num_of_ASDUs)]), end
+    if verbose disp(['Number of quantities in the data is: ' num2str(quantities)]), end
     if verbose disp(['Number of loaded packets is: ' num2str(size(Data, 1))]), end
 
 end % function
@@ -1550,7 +1555,7 @@ function [sourceMacsCell, destMacsCell]= get_macs_from_pcap(pcapPath, tsharkPath
         %     tsharkPath, ...
         %     pcapPath);
         % [status, output] = system(cmd);
-        % sourceMacsCell = strsplit(strtrim(output), sprintf('\n')); % parse output this takes too long for 1.5 GB files - more than 5 minutes
+        % sourceMacsCell = strsplit(strtrim(output), sprintf('\n')); % parse output XXX this takes too long for 1.5 GB files - more than 5 minutes
         % sourceMacsCell = unique(sourceMacsCell, 'stable');  % get only unique values and keep order
 
     % Search for MACs ---------------------- %<<<2
