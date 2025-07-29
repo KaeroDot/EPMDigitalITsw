@@ -1,1 +1,12 @@
 evaluation/_temp
+gui/testdata_simple_csv_fs=4000_f=49.9-50-amplitude.fig
+gui/testdata_simple_csv_fs=4000_f=49.9-50-amplitude.png
+gui/testdata_simple_csv_fs=4000_f=49.9-50-frequency.fig
+gui/testdata_simple_csv_fs=4000_f=49.9-50-frequency.png
+gui/testdata_simple_csv_fs=4000_f=49.9-50-phase.fig
+gui/testdata_simple_csv_fs=4000_f=49.9-50-phase.png
+gui/testdata_simple_csv_fs=4000_f=49.9-50-results.mat
+evaluation/replot_cokl_figs.m
+evaluation/getAllFiles.m
+evaluation/email_nejistoty
+evaluation/email_rado
