@@ -1,3 +1,7 @@
+Use gui/proc_SAMMU_waveform_gui.m to convert pcap files to csv.
+
+Source of the data:
+
 ABB REX640
 100V voltage inputs, 4000:1 VT ratio
 1A current inputs, 1000:1 CT ratio
