@@ -55,4 +55,23 @@ ylabel('Signal amplitude')
 legend()
 saveas(gcf(), 'results/pretty_spectrum.png')
 
+% export to CSV:
+% pad resamplingSVstream data to have same length as FFT and WFFT:
+paddedSVdataf = [sp_resamplingSVstream.f.v(:); nan(max(0, numel(sp_FFT.f.v(:)) - numel(sp_resamplingSVstream.f.v(:))), 1)];
+paddedSVdataA = [sp_resamplingSVstream.A.v(:); nan(max(0, numel(sp_FFT.A.v(:)) - numel(sp_resamplingSVstream.A.v(:))), 1)];
+csvdata = [sp_FFT.f.v(:), ...
+           sp_FFT.A.v(:), ...
+           sp_WFFT.f.v(:), ...
+           sp_WFFT.A.v(:), ...
+           paddedSVdataf(:), ...
+           paddedSVdataA(:), ...
+           sp_splineresample.f.v(:), ...
+           sp_splineresample.A.v(:)];
+
+csvfilename = 'results/pretty_spectrum.csv';
+fid = fopen(csvfilename, 'w');
+fprintf(fid, 'f_FFT;A_FFT;f_WFFT;A_WFFT;f_resamplingSVstream;A_resamplingSVstream;f_splineresample;A_splineresample\n');
+fclose(fid);
+dlmwrite(csvfilename, csvdata, 'delimiter', ';', '-append');
+
 % vim settings modeline: vim: foldmarker=%<<<,%>>> fdm=marker fen ft=matlab textwidth=80 tabstop=4 shiftwidth=4
