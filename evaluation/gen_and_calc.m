@@ -121,11 +121,13 @@ function [DO, DI, CS] = gen_and_calc(DI, CS) %<<<1
     tic;
     WR = qwtb('windowedRMS', Signal, CS);
     DO.WR_ct.v = toc;
-    % RMS value to the output, but in peak value:
+    % RMS value to the output, but in peak value, and account all harmonics:
     DO.WR_f.v       = NaN;
     DO.WR_fErr.v    = NaN;
-    DO.WR_A.v       = WR.A.v.*2.^0.5;
-    DO.WR_AErr.v    = WR.A.v.*2.^0.5 - DI.A.v(1);
+    % DO.WR_A.v       = WR.A.v.*2.^0.5;
+    % DO.WR_AErr.v    = WR.A.v.*2.^0.5 - DI.A.v(1);
+    DO.WR_A.v       = WR.A.v;
+    DO.WR_AErr.v    = WR.A.v - (sum(DI.A.v.^2)./numel(DI.A.v))^0.5;
     DO.WR_ph.v      = NaN;
     DO.WR_phErr.v   = NaN;
     % Fill in values for other harmonic components by NaN, because estimate
