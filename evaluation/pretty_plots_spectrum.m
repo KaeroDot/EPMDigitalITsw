@@ -2,7 +2,7 @@
 
 %% Generate sampled data
 fs = 12800;
-L = 2*1280;
+L =  12800;
 t = [0:L-1] ./ fs;
 A = 1;
 f = 49.25;
@@ -10,6 +10,10 @@ DISampled.y.v = A.*sin(2.*pi.*f.*t + 0) + A./10.*sin(2.*pi.*5.*f.*t);
 DISampled.fs.v = fs;
 DISampled.fest.v = f;
 CS.verbose = 1;
+filename_appendix = '_50periods';
+
+figfilename = ['results/pretty_spectrum' filename_appendix '.png']
+csvfilename = ['results/pretty_spectrum' filename_appendix '.csv'];
 
 %% Signal frequency estimate
 % Get estimate of signal frequency to be coherent after resampling. For
@@ -53,7 +57,7 @@ xlim([0 1000])
 xlabel('Frequency (Hz)')
 ylabel('Signal amplitude')
 legend()
-saveas(gcf(), 'results/pretty_spectrum.png')
+saveas(gcf(), figfilename)
 
 % export to CSV:
 % pad resamplingSVstream data to have same length as FFT and WFFT:
@@ -68,7 +72,6 @@ csvdata = [sp_FFT.f.v(:), ...
            sp_splineresample.f.v(:), ...
            sp_splineresample.A.v(:)];
 
-csvfilename = 'results/pretty_spectrum.csv';
 fid = fopen(csvfilename, 'w');
 fprintf(fid, 'f_FFT;A_FFT;f_WFFT;A_WFFT;f_resamplingSVstream;A_resamplingSVstream;f_splineresample;A_splineresample\n');
 fclose(fid);
