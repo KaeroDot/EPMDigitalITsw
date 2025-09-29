@@ -192,8 +192,8 @@ function download_Digital_IT() %<<<2
             error('DigitalIT algorithms not found in QWTB.')
         end
         % copy demo data file:
-        copyfile(fullfile(downloaded_extracted_zip_path, 'gui/testdata_simple_csv_fs=4000_f=49.9-50.csv'), ...
-            fullfile(pwd, 'testdata_simple_csv_fs=4000_f=49.9-50.csv'));
+        copyfile(fullfile(downloaded_extracted_zip_path, 'gui/E_csv_simulated_ROCOF_fs=4000_f=49.9-50.csv'), ...
+            fullfile(pwd, 'E_csv_simulated_ROCOF_fs=4000_f=49.9-50.csv'));
     catch ERR
         % qwtb still not found
         errmsg = sprintf('Cannot download/unzip/add DigitalIT algorithms... Ask author to fix it. The error message was:\n%s', ERR.message);
